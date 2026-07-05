@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Local Ollama runtime (~2 GB of downloaded binaries/CUDA libs; not source)
+.ollama-runtime/
+
+# Generated artifacts
+data/index/
+eval_results.json

@@ -1,0 +1,261 @@
+{
+  "description": "Evaluation set for the Marvel/DC Fandom RAG. Every answerable question was verified to be answerable from the scraped corpus. Categories: factual (single doc), alias (retrieval by nickname), comparative (multiple relevant docs), multi_hop (several facts from one doc), unanswerable (out-of-corpus; the correct behavior is to abstain).",
+  "questions": [
+    {
+      "id": "q01",
+      "category": "factual",
+      "question": "What is the name of Thor's enchanted hammer?",
+      "relevant_docs": ["marvel__thor.md"],
+      "reference_answer": "Thor's enchanted hammer is called Mjolnir.",
+      "answerable": true
+    },
+    {
+      "id": "q02",
+      "category": "factual",
+      "question": "What indestructible metal is bonded to Wolverine's skeleton, and which program did it to him?",
+      "relevant_docs": ["marvel__wolverine.md"],
+      "reference_answer": "Wolverine's skeleton is coated in Adamantium, which was done to him by the Weapon X Program.",
+      "answerable": true
+    },
+    {
+      "id": "q03",
+      "category": "factual",
+      "question": "Who murdered Bruce Wayne's parents?",
+      "relevant_docs": ["dc__batman.md"],
+      "reference_answer": "Bruce Wayne's parents, Thomas and Martha Wayne, were murdered by Joe Chill.",
+      "answerable": true
+    },
+    {
+      "id": "q04",
+      "category": "factual",
+      "question": "From which planet does Superman come?",
+      "relevant_docs": ["dc__superman.md"],
+      "reference_answer": "Superman comes from the planet Krypton; he was born Kal-El and sent to Earth as its destruction approached.",
+      "answerable": true
+    },
+    {
+      "id": "q05",
+      "category": "factual",
+      "question": "Which African nation does Black Panther rule?",
+      "relevant_docs": ["marvel__black_panther.md"],
+      "reference_answer": "Black Panther (T'Challa) rules the African nation of Wakanda.",
+      "answerable": true
+    },
+    {
+      "id": "q06",
+      "category": "factual",
+      "question": "Who trained Stephen Strange in the mystic arts?",
+      "relevant_docs": ["marvel__doctor_strange.md"],
+      "reference_answer": "Stephen Strange was trained in the mystic arts by the Ancient One.",
+      "answerable": true
+    },
+    {
+      "id": "q07",
+      "category": "factual",
+      "question": "What is the source of the Flash's super-speed?",
+      "relevant_docs": ["dc__flash.md"],
+      "reference_answer": "The Flash draws his super-speed from the Speed Force.",
+      "answerable": true
+    },
+    {
+      "id": "q08",
+      "category": "factual",
+      "question": "What island do Wonder Woman and the Amazons come from?",
+      "relevant_docs": ["dc__wonder_woman.md"],
+      "reference_answer": "Wonder Woman and the Amazons come from the island of Themyscira.",
+      "answerable": true
+    },
+    {
+      "id": "q09",
+      "category": "factual",
+      "question": "Who runs the Suicide Squad?",
+      "relevant_docs": ["dc__suicide_squad.md"],
+      "reference_answer": "The Suicide Squad is run by Amanda Waller.",
+      "answerable": true
+    },
+    {
+      "id": "q10",
+      "category": "factual",
+      "question": "Where did Harleen Quinzel work when she first met the Joker?",
+      "relevant_docs": ["dc__harley_quinn.md"],
+      "reference_answer": "Harleen Quinzel was working at Arkham Asylum when she met the Joker.",
+      "answerable": true
+    },
+    {
+      "id": "q11",
+      "category": "factual",
+      "question": "Whose death taught Spider-Man about power and responsibility?",
+      "relevant_docs": ["marvel__spider_man.md"],
+      "reference_answer": "The death of his Uncle Ben taught Peter Parker that with great power there must also come great responsibility.",
+      "answerable": true
+    },
+    {
+      "id": "q12",
+      "category": "factual",
+      "question": "What does Ra's al Ghul use to extend his life for centuries?",
+      "relevant_docs": ["dc__ras_al_ghul.md"],
+      "reference_answer": "Ra's al Ghul extends his life by using Lazarus Pits.",
+      "answerable": true
+    },
+    {
+      "id": "q13",
+      "category": "alias",
+      "question": "Which hero is known as the Man of Steel?",
+      "relevant_docs": ["dc__superman.md"],
+      "reference_answer": "Superman (Kal-El, also known as Clark Kent) is the Man of Steel.",
+      "answerable": true
+    },
+    {
+      "id": "q14",
+      "category": "alias",
+      "question": "Who is the Dark Knight of Gotham City?",
+      "relevant_docs": ["dc__batman.md"],
+      "reference_answer": "Batman (Bruce Wayne) is the Dark Knight of Gotham City.",
+      "answerable": true
+    },
+    {
+      "id": "q15",
+      "category": "alias",
+      "question": "Which Marvel hero holds the title of Sorcerer Supreme?",
+      "relevant_docs": ["marvel__doctor_strange.md"],
+      "reference_answer": "Doctor Strange (Stephen Strange) holds the title of Sorcerer Supreme.",
+      "answerable": true
+    },
+    {
+      "id": "q16",
+      "category": "alias",
+      "question": "Which mutant is called the Master of Magnetism?",
+      "relevant_docs": ["marvel__magneto.md"],
+      "reference_answer": "Magneto (Max Eisenhardt, also known as Erik Lehnsherr) is called the Master of Magnetism.",
+      "answerable": true
+    },
+    {
+      "id": "q17",
+      "category": "alias",
+      "question": "Which villain is known as the Mad Titan?",
+      "relevant_docs": ["marvel__thanos.md"],
+      "reference_answer": "Thanos is known as the Mad Titan.",
+      "answerable": true
+    },
+    {
+      "id": "q18",
+      "category": "comparative",
+      "question": "Deathstroke and Deadpool are both mercenaries with similar names. What are their real names?",
+      "relevant_docs": ["dc__deathstroke.md", "marvel__deadpool.md"],
+      "reference_answer": "Deathstroke's real name is Slade Wilson and Deadpool's real name is Wade Wilson.",
+      "answerable": true
+    },
+    {
+      "id": "q19",
+      "category": "comparative",
+      "question": "How are Superman and Supergirl related to each other?",
+      "relevant_docs": ["dc__superman.md", "dc__supergirl.md"],
+      "reference_answer": "They are cousins: Supergirl is Kara Zor-El, the Kryptonian cousin of Superman (Kal-El).",
+      "answerable": true
+    },
+    {
+      "id": "q20",
+      "category": "comparative",
+      "question": "Hawkeye and Green Arrow are both archers. What are their civilian identities?",
+      "relevant_docs": ["marvel__hawkeye.md", "dc__green_arrow.md"],
+      "reference_answer": "Hawkeye is Clint Barton and Green Arrow is Oliver Queen.",
+      "answerable": true
+    },
+    {
+      "id": "q21",
+      "category": "comparative",
+      "question": "What is the family relationship between Thor and Loki?",
+      "relevant_docs": ["marvel__thor.md", "marvel__loki.md"],
+      "reference_answer": "Loki is Thor's adopted brother: Odin took in Loki, so the two were raised as brothers in Asgard.",
+      "answerable": true
+    },
+    {
+      "id": "q22",
+      "category": "comparative",
+      "question": "Thanos and Darkseid are both cosmic tyrants. What does Thanos famously wield, and what world does Darkseid rule?",
+      "relevant_docs": ["marvel__thanos.md", "dc__darkseid.md"],
+      "reference_answer": "Thanos famously wielded the Infinity Gauntlet, while Darkseid rules the world of Apokolips.",
+      "answerable": true
+    },
+    {
+      "id": "q23",
+      "category": "multi_hop",
+      "question": "What happened to Barbara Gordon after the Joker shot her, and what identity did she adopt afterwards?",
+      "relevant_docs": ["dc__barbara_gordon.md"],
+      "reference_answer": "After the Joker shot her, Barbara Gordon was paralyzed and lost the use of her legs; she then became Oracle, an information broker supporting other heroes.",
+      "answerable": true
+    },
+    {
+      "id": "q24",
+      "category": "multi_hop",
+      "question": "How did Peter Parker get his spider powers?",
+      "relevant_docs": ["marvel__spider_man.md"],
+      "reference_answer": "Peter Parker gained his powers after being bitten by a radioactive spider.",
+      "answerable": true
+    },
+    {
+      "id": "q25",
+      "category": "multi_hop",
+      "question": "How did Steve Rogers become Captain America, and who was his wartime partner?",
+      "relevant_docs": ["marvel__captain_america.md"],
+      "reference_answer": "Steve Rogers became Captain America after being given the Super-Soldier Serum; his wartime partner was Bucky Barnes.",
+      "answerable": true
+    },
+    {
+      "id": "q26",
+      "category": "multi_hop",
+      "question": "Why is Daredevil blind, and which New York neighborhood does he protect?",
+      "relevant_docs": ["marvel__daredevil.md"],
+      "reference_answer": "Matt Murdock was blinded in an accident involving radioactive material as a boy; he protects Hell's Kitchen in New York City.",
+      "answerable": true
+    },
+    {
+      "id": "q27",
+      "category": "multi_hop",
+      "question": "What drug gives Bane his enhanced strength?",
+      "relevant_docs": ["dc__bane.md"],
+      "reference_answer": "Bane's enhanced strength comes from the drug Venom.",
+      "answerable": true
+    },
+    {
+      "id": "q28",
+      "category": "unanswerable",
+      "question": "Who is Naruto Uzumaki?",
+      "relevant_docs": [],
+      "reference_answer": "This is not covered by the knowledge base; the assistant should say it does not know.",
+      "answerable": false
+    },
+    {
+      "id": "q29",
+      "category": "unanswerable",
+      "question": "What is Goku's most powerful transformation?",
+      "relevant_docs": [],
+      "reference_answer": "This is not covered by the knowledge base; the assistant should say it does not know.",
+      "answerable": false
+    },
+    {
+      "id": "q30",
+      "category": "unanswerable",
+      "question": "Who is the headmaster of Hogwarts?",
+      "relevant_docs": [],
+      "reference_answer": "This is not covered by the knowledge base; the assistant should say it does not know.",
+      "answerable": false
+    },
+    {
+      "id": "q31",
+      "category": "unanswerable",
+      "question": "What is Optimus Prime's home planet?",
+      "relevant_docs": [],
+      "reference_answer": "This is not covered by the knowledge base; the assistant should say it does not know.",
+      "answerable": false
+    },
+    {
+      "id": "q32",
+      "category": "unanswerable",
+      "question": "Which actor played Iron Man in the Marvel Cinematic Universe films?",
+      "relevant_docs": [],
+      "reference_answer": "Movie casting is not covered by the comics knowledge base; the assistant should say it does not know.",
+      "answerable": false
+    }
+  ]
+}

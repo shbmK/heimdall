@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-base"
+version = "0.1.0"
+description = "A basic but fully functional local RAG pipeline (Ollama) over Marvel/DC Fandom data, with built-in evaluation metrics."
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "requests>=2.31",
+    "typer>=0.12",
+    "rich>=13.7",
+]
+
+[project.scripts]
+rag = "rag.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["rag*"]

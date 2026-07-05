@@ -1,0 +1,517 @@
+{
+  "scraped_at": "2026-07-06T04:16:39",
+  "pages": [
+    {
+      "wiki": "dc",
+      "title": "Orin (New Earth)",
+      "slug": "aquaman",
+      "ok": true,
+      "path": "data/corpus/dc__aquaman.md",
+      "url": "https://dc.fandom.com/wiki/Orin_(New_Earth)",
+      "chars": 59936,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Bane (New Earth)",
+      "slug": "bane",
+      "ok": true,
+      "path": "data/corpus/dc__bane.md",
+      "url": "https://dc.fandom.com/wiki/Bane_(New_Earth)",
+      "chars": 22739,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Barbara Gordon (New Earth)",
+      "slug": "barbara_gordon",
+      "ok": true,
+      "path": "data/corpus/dc__barbara_gordon.md",
+      "url": "https://dc.fandom.com/wiki/Barbara_Gordon_(New_Earth)",
+      "chars": 35489,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Bruce Wayne (New Earth)",
+      "slug": "batman",
+      "ok": true,
+      "path": "data/corpus/dc__batman.md",
+      "url": "https://dc.fandom.com/wiki/Bruce_Wayne_(New_Earth)",
+      "chars": 59862,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Selina Kyle (New Earth)",
+      "slug": "catwoman",
+      "ok": true,
+      "path": "data/corpus/dc__catwoman.md",
+      "url": "https://dc.fandom.com/wiki/Selina_Kyle_(New_Earth)",
+      "chars": 46742,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Victor Stone (New Earth)",
+      "slug": "cyborg",
+      "ok": true,
+      "path": "data/corpus/dc__cyborg.md",
+      "url": "https://dc.fandom.com/wiki/Victor_Stone_(New_Earth)",
+      "chars": 17460,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Darkseid (New Earth)",
+      "slug": "darkseid",
+      "ok": true,
+      "path": "data/corpus/dc__darkseid.md",
+      "url": "https://dc.fandom.com/wiki/Uxas_(New_Earth)",
+      "chars": 27436,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Slade Wilson (New Earth)",
+      "slug": "deathstroke",
+      "ok": true,
+      "path": "data/corpus/dc__deathstroke.md",
+      "url": "https://dc.fandom.com/wiki/Slade_Wilson_(New_Earth)",
+      "chars": 33154,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Barry Allen (New Earth)",
+      "slug": "flash",
+      "ok": true,
+      "path": "data/corpus/dc__flash.md",
+      "url": "https://dc.fandom.com/wiki/Barry_Allen_(New_Earth)",
+      "chars": 59997,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Oliver Queen (New Earth)",
+      "slug": "green_arrow",
+      "ok": true,
+      "path": "data/corpus/dc__green_arrow.md",
+      "url": "https://dc.fandom.com/wiki/Oliver_Queen_(New_Earth)",
+      "chars": 34390,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Hal Jordan (New Earth)",
+      "slug": "green_lantern",
+      "ok": true,
+      "path": "data/corpus/dc__green_lantern.md",
+      "url": "https://dc.fandom.com/wiki/Hal_Jordan_(New_Earth)",
+      "chars": 44122,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Harleen Quinzel (New Earth)",
+      "slug": "harley_quinn",
+      "ok": true,
+      "path": "data/corpus/dc__harley_quinn.md",
+      "url": "https://dc.fandom.com/wiki/Harleen_Quinzel_(New_Earth)",
+      "chars": 5927,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Joker (New Earth)",
+      "slug": "joker",
+      "ok": true,
+      "path": "data/corpus/dc__joker.md",
+      "url": "https://dc.fandom.com/wiki/Joker_(New_Earth)",
+      "chars": 29874,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Justice League of America (New Earth)",
+      "slug": "justice_league",
+      "ok": true,
+      "path": "data/corpus/dc__justice_league.md",
+      "url": "https://dc.fandom.com/wiki/Justice_League_of_America_(New_Earth)",
+      "chars": 35404,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Alexander Luthor (New Earth)",
+      "slug": "lex_luthor",
+      "ok": true,
+      "path": "data/corpus/dc__lex_luthor.md",
+      "url": "https://dc.fandom.com/wiki/Alexander_Luthor_(New_Earth)",
+      "chars": 39307,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "J'onn J'onzz (New Earth)",
+      "slug": "martian_manhunter",
+      "ok": true,
+      "path": "data/corpus/dc__martian_manhunter.md",
+      "url": "https://dc.fandom.com/wiki/J'onn_J'onzz_(New_Earth)",
+      "chars": 34332,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Richard Grayson (New Earth)",
+      "slug": "nightwing",
+      "ok": true,
+      "path": "data/corpus/dc__nightwing.md",
+      "url": "https://dc.fandom.com/wiki/Dick_Grayson_(New_Earth)",
+      "chars": 59680,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Ra's al Ghul (New Earth)",
+      "slug": "ras_al_ghul",
+      "ok": true,
+      "path": "data/corpus/dc__ras_al_ghul.md",
+      "url": "https://dc.fandom.com/wiki/Ra's_al_Ghul_(New_Earth)",
+      "chars": 23468,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Billy Batson (New Earth)",
+      "slug": "shazam",
+      "ok": true,
+      "path": "data/corpus/dc__shazam.md",
+      "url": "https://dc.fandom.com/wiki/Billy_Batson_(New_Earth)",
+      "chars": 9268,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Suicide Squad (New Earth)",
+      "slug": "suicide_squad",
+      "ok": true,
+      "path": "data/corpus/dc__suicide_squad.md",
+      "url": "https://dc.fandom.com/wiki/Suicide_Squad_(New_Earth)",
+      "chars": 54626,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Kara Zor-El (New Earth)",
+      "slug": "supergirl",
+      "ok": true,
+      "path": "data/corpus/dc__supergirl.md",
+      "url": "https://dc.fandom.com/wiki/Kara_Zor-El_(New_Earth)",
+      "chars": 59583,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Kal-El (New Earth)",
+      "slug": "superman",
+      "ok": true,
+      "path": "data/corpus/dc__superman.md",
+      "url": "https://dc.fandom.com/wiki/Kal-El_(New_Earth)",
+      "chars": 59580,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Teen Titans (New Earth)",
+      "slug": "teen_titans",
+      "ok": true,
+      "path": "data/corpus/dc__teen_titans.md",
+      "url": "https://dc.fandom.com/wiki/Teen_Titans_(New_Earth)",
+      "chars": 24418,
+      "error": ""
+    },
+    {
+      "wiki": "dc",
+      "title": "Diana of Themyscira (New Earth)",
+      "slug": "wonder_woman",
+      "ok": true,
+      "path": "data/corpus/dc__wonder_woman.md",
+      "url": "https://dc.fandom.com/wiki/Diana_of_Themyscira_(New_Earth)",
+      "chars": 58746,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Avengers (Earth-616)",
+      "slug": "avengers",
+      "ok": true,
+      "path": "data/corpus/marvel__avengers.md",
+      "url": "https://marvel.fandom.com/wiki/Avengers_(Earth-616)",
+      "chars": 59803,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "T'Challa (Earth-616)",
+      "slug": "black_panther",
+      "ok": true,
+      "path": "data/corpus/marvel__black_panther.md",
+      "url": "https://marvel.fandom.com/wiki/T'Challa_(Earth-616)",
+      "chars": 59297,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Natalia Romanova (Earth-616)",
+      "slug": "black_widow",
+      "ok": true,
+      "path": "data/corpus/marvel__black_widow.md",
+      "url": "https://marvel.fandom.com/wiki/Natalia_Romanova_(Earth-616)",
+      "chars": 45358,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Steven Rogers (Earth-616)",
+      "slug": "captain_america",
+      "ok": true,
+      "path": "data/corpus/marvel__captain_america.md",
+      "url": "https://marvel.fandom.com/wiki/Steven_Rogers_(Earth-616)",
+      "chars": 59585,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Carol Danvers (Earth-616)",
+      "slug": "captain_marvel",
+      "ok": true,
+      "path": "data/corpus/marvel__captain_marvel.md",
+      "url": "https://marvel.fandom.com/wiki/Carol_Danvers_(Earth-616)",
+      "chars": 59317,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Scott Summers (Earth-616)",
+      "slug": "cyclops",
+      "ok": true,
+      "path": "data/corpus/marvel__cyclops.md",
+      "url": "https://marvel.fandom.com/wiki/Scott_Summers_(Earth-616)",
+      "chars": 59856,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Matthew Murdock (Earth-616)",
+      "slug": "daredevil",
+      "ok": true,
+      "path": "data/corpus/marvel__daredevil.md",
+      "url": "https://marvel.fandom.com/wiki/Matthew_Murdock_(Earth-616)",
+      "chars": 59930,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Wade Wilson (Earth-616)",
+      "slug": "deadpool",
+      "ok": true,
+      "path": "data/corpus/marvel__deadpool.md",
+      "url": "https://marvel.fandom.com/wiki/Wade_Wilson_(Earth-616)",
+      "chars": 59961,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Victor von Doom (Earth-616)",
+      "slug": "doctor_doom",
+      "ok": true,
+      "path": "data/corpus/marvel__doctor_doom.md",
+      "url": "https://marvel.fandom.com/wiki/Victor_von_Doom_(Earth-616)",
+      "chars": 58678,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Stephen Strange (Earth-616)",
+      "slug": "doctor_strange",
+      "ok": true,
+      "path": "data/corpus/marvel__doctor_strange.md",
+      "url": "https://marvel.fandom.com/wiki/Stephen_Strange_(Earth-616)",
+      "chars": 59643,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Fantastic Four (Earth-616)",
+      "slug": "fantastic_four",
+      "ok": true,
+      "path": "data/corpus/marvel__fantastic_four.md",
+      "url": "https://marvel.fandom.com/wiki/Fantastic_Four_(Earth-616)",
+      "chars": 45290,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Norman Osborn (Earth-616)",
+      "slug": "green_goblin",
+      "ok": true,
+      "path": "data/corpus/marvel__green_goblin.md",
+      "url": "https://marvel.fandom.com/wiki/Norman_Osborn_(Earth-616)",
+      "chars": 59684,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Clinton Barton (Earth-616)",
+      "slug": "hawkeye",
+      "ok": true,
+      "path": "data/corpus/marvel__hawkeye.md",
+      "url": "https://marvel.fandom.com/wiki/Clinton_Barton_(Earth-616)",
+      "chars": 37567,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Bruce Banner (Earth-616)",
+      "slug": "hulk",
+      "ok": true,
+      "path": "data/corpus/marvel__hulk.md",
+      "url": "https://marvel.fandom.com/wiki/Bruce_Banner_(Earth-616)",
+      "chars": 59837,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Anthony Stark (Earth-616)",
+      "slug": "iron_man",
+      "ok": true,
+      "path": "data/corpus/marvel__iron_man.md",
+      "url": "https://marvel.fandom.com/wiki/Anthony_Stark_(Earth-616)",
+      "chars": 59539,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Jean Grey (Earth-616)",
+      "slug": "jean_grey",
+      "ok": true,
+      "path": "data/corpus/marvel__jean_grey.md",
+      "url": "https://marvel.fandom.com/wiki/Jean_Grey_(Earth-616)",
+      "chars": 59631,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Loki Laufeyson (Earth-616)",
+      "slug": "loki",
+      "ok": true,
+      "path": "data/corpus/marvel__loki.md",
+      "url": "https://marvel.fandom.com/wiki/Loki_Laufeyson_(Earth-616)",
+      "chars": 41958,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Max Eisenhardt (Earth-616)",
+      "slug": "magneto",
+      "ok": true,
+      "path": "data/corpus/marvel__magneto.md",
+      "url": "https://marvel.fandom.com/wiki/Max_Eisenhardt_(Earth-616)",
+      "chars": 59529,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Johann Shmidt (Earth-616)",
+      "slug": "red_skull",
+      "ok": true,
+      "path": "data/corpus/marvel__red_skull.md",
+      "url": "https://marvel.fandom.com/wiki/Johann_Shmidt_(Earth-616)",
+      "chars": 32180,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Wanda Maximoff (Earth-616)",
+      "slug": "scarlet_witch",
+      "ok": true,
+      "path": "data/corpus/marvel__scarlet_witch.md",
+      "url": "https://marvel.fandom.com/wiki/Wanda_Maximoff_(Earth-616)",
+      "chars": 59595,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Peter Parker (Earth-616)",
+      "slug": "spider_man",
+      "ok": true,
+      "path": "data/corpus/marvel__spider_man.md",
+      "url": "https://marvel.fandom.com/wiki/Peter_Parker_(Earth-616)",
+      "chars": 59901,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Peter Quill (Earth-616)",
+      "slug": "star_lord",
+      "ok": true,
+      "path": "data/corpus/marvel__star_lord.md",
+      "url": "https://marvel.fandom.com/wiki/Peter_Quill_(Earth-616)",
+      "chars": 59970,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Ororo Munroe (Earth-616)",
+      "slug": "storm",
+      "ok": true,
+      "path": "data/corpus/marvel__storm.md",
+      "url": "https://marvel.fandom.com/wiki/Ororo_Munroe_(Earth-616)",
+      "chars": 59329,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Thanos (Earth-616)",
+      "slug": "thanos",
+      "ok": true,
+      "path": "data/corpus/marvel__thanos.md",
+      "url": "https://marvel.fandom.com/wiki/Thanos_(Earth-616)",
+      "chars": 59714,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "Thor Odinson (Earth-616)",
+      "slug": "thor",
+      "ok": true,
+      "path": "data/corpus/marvel__thor.md",
+      "url": "https://marvel.fandom.com/wiki/Thor_Odinson_(Earth-616)",
+      "chars": 59979,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "James Howlett (Earth-616)",
+      "slug": "wolverine",
+      "ok": true,
+      "path": "data/corpus/marvel__wolverine.md",
+      "url": "https://marvel.fandom.com/wiki/James_Howlett_(Earth-616)",
+      "chars": 59570,
+      "error": ""
+    },
+    {
+      "wiki": "marvel",
+      "title": "X-Men (Earth-616)",
+      "slug": "x_men",
+      "ok": true,
+      "path": "data/corpus/marvel__x_men.md",
+      "url": "https://marvel.fandom.com/wiki/X-Men_(Earth-616)",
+      "chars": 59202,
+      "error": ""
+    }
+  ],
+  "ok": 51,
+  "failed": 0
+}
