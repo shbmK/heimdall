@@ -1,4 +1,4 @@
-# Heimdall :- a local RAG over Marvel & DC lore, with metrics
+# Heimdall :- a local RAG over Marvel & DC lore
 
 A small but fully functional Retrieval-Augmented Generation (RAG) pipeline that runs entirely on your machine:
 
@@ -181,22 +181,6 @@ rag/
 
 Each component hides behind a small interface — `LLMProvider` for embeddings/generation and `BaseVectorStore` for retrieval — each chosen by a factory (`create_llm`, `create_store`/`open_store`). The pipeline, ingest, and eval code depend only on those interfaces, so swapping the LLM backend or the vector store is a one-file change.
 
-## Publishing as a package
-
-Yes — this is a standard [PEP 621](https://packaging.python.org/en/latest/) project with a console-script entry point, so it can be published to PyPI and installed with `pip install rag-base`, exposing the `rag` command everywhere:
-
-```bash
-pip install build twine
-python -m build                 # produces dist/*.whl and dist/*.tar.gz
-twine upload dist/*             # needs a PyPI account + API token
-```
-
-A few things to know before you publish:
-
-- **Pick a unique name.** `rag-base` is generic and may be taken on PyPI. Change `name` in [pyproject.toml](pyproject.toml) (and the `[project.urls]`) to something unique; the import package (`rag/`) can stay as is.
-- **Runtime services aren't Python deps.** The wheel installs the pipeline, CLI, and the bundled eval set. Ollama (and optionally Qdrant, via `pip install rag-base[qdrant]`) are external services the user runs separately — the same model every RAG library follows.
-- **Data paths are working-directory relative** (`data/corpus`, `data/index`, ...). After a plain `pip install` there's no corpus yet, so a user runs `rag scrape` to build one in their current directory, then `rag ingest`. Override locations with `RAG_CORPUS_DIR` / `RAG_INDEX_DIR` if desired.
-- Bump `version` on every release; PyPI rejects re-uploads of an existing version.
 
 ## Troubleshooting
 
