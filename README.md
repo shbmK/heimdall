@@ -188,3 +188,9 @@ Each component hides behind a small interface — `LLMProvider` for embeddings/g
 - **`Missing Ollama models`** — run the `ollama pull` commands from Setup.
 - **Everything is slow / Ollama says `100% CPU` in `ollama ps`** — Ollama may be silently failing to load its GPU runner. One known cause: the runner directory isn't world-readable. Check with `ls -ld /usr/local/lib/ollama/cuda_v12` and fix with `sudo chmod -R a+rX /usr/local/lib/ollama`, then restart `ollama serve`.
 - **Scrape failures for individual pages** — page titles change on the wikis occasionally; check `data/corpus/manifest.json` for details and pass the corrected title with `rag scrape --wiki ... --character "..."`.
+
+## Attribution & disclaimer
+
+This is a personal, non-commercial project built for learning and experimentation.
+
+The corpus is fetched at runtime from the [Marvel](https://marvel.fandom.com) and [DC](https://dc.fandom.com) Fandom wikis through the [MediaWiki API](https://www.mediawiki.org/wiki/API:Main_page). That text is authored by the Fandom communities and licensed under [CC BY-SA](https://creativecommons.org/licenses/by-sa/3.0/); all credit for the content goes to those contributors. Marvel and DC characters, names, and related material are trademarks of their respective owners (Marvel Entertainment and DC Comics). This project is not affiliated with, endorsed by, or sponsored by Fandom, Marvel, or DC, and it redistributes no wiki content — the scraper simply downloads it locally on demand. Please use it accordingly and respect each wiki's terms of use.
