@@ -1,4 +1,4 @@
-# rag_base — a local RAG over Marvel & DC lore, with metrics
+# Heimdall :- a local RAG over Marvel & DC lore, with metrics
 
 A small but fully functional Retrieval-Augmented Generation (RAG) pipeline that runs entirely on your machine:
 
@@ -49,12 +49,34 @@ rag ask "How are Superman and Supergirl related?"
 rag chat            # interactive loop
 
 # Run the evaluation suite
-rag eval                        # all 32 questions
+rag eval                        # all 33 questions
 rag eval --limit 8              # quick partial run
 rag eval --category alias       # one category only
 ```
 
 Answers cite the retrieved passages (`[1]`, `[2]`, ...) and the sources table shows which document and section each passage came from. If the answer isn't in the corpus, the model is instructed to say "I don't know" rather than guess.
+
+## Run the whole stack with Docker
+
+[docker-compose.yml](docker-compose.yml) brings up the full system — Ollama, Qdrant, and the `rag` app — with one command:
+
+```bash
+docker compose up -d --build
+```
+
+On first start it pulls the models (~2.3 GB into a named volume) and builds the index into Qdrant, so the initial boot takes a few minutes. Then query it:
+
+```bash
+docker compose exec rag rag ask "Who trained Doctor Strange?"
+docker compose exec rag rag eval --limit 8
+docker compose down          # stop (add -v to also wipe model/vector volumes)
+```
+
+Notes:
+- Images are pinned (`ollama/ollama:0.31.1`, `qdrant/qdrant:v1.18.2`) and the app runs as a non-root user.
+- Ollama and Qdrant are published on `127.0.0.1` only — neither ships with authentication, so they are not exposed to the network. Keep it that way if you deploy this.
+- CPU by default. To use an NVIDIA GPU, install the NVIDIA Container Toolkit and uncomment the `deploy.resources` block on the `ollama` service.
+- Models and vector data live in the `ollama_models` and `qdrant_storage` volumes and survive restarts.
 
 ### Adding more characters
 
@@ -68,11 +90,11 @@ You can also drop any `.md`/`.txt` files of your own into `data/corpus/` — fro
 
 ## Evaluation & metrics
 
-The eval set ([data/eval/eval_set.json](data/eval/eval_set.json)) contains 32 questions, each labeled with its relevant document(s), a reference answer, and a category:
+The eval set ([data/eval/eval_set.json](data/eval/eval_set.json)) contains 33 questions, each labeled with its relevant document(s), a reference answer, and a category:
 
 | Category | Tests | Example |
 |---|---|---|
-| `factual` | single-document lookup | "Who murdered Bruce Wayne's parents?" |
+| `factual` | single-document lookup | "Who is Bruce Wayne's loyal butler?" |
 | `alias` | retrieval by nickname | "Which hero is known as the Man of Steel?" |
 | `comparative` | multiple relevant docs, cross-universe | "Deathstroke and Deadpool are both mercenaries — what are their real names?" |
 | `multi_hop` | several facts from one document | "How did Steve Rogers become Captain America, and who was his wartime partner?" |
@@ -158,6 +180,23 @@ rag/
 ```
 
 Each component hides behind a small interface — `LLMProvider` for embeddings/generation and `BaseVectorStore` for retrieval — each chosen by a factory (`create_llm`, `create_store`/`open_store`). The pipeline, ingest, and eval code depend only on those interfaces, so swapping the LLM backend or the vector store is a one-file change.
+
+## Publishing as a package
+
+Yes — this is a standard [PEP 621](https://packaging.python.org/en/latest/) project with a console-script entry point, so it can be published to PyPI and installed with `pip install rag-base`, exposing the `rag` command everywhere:
+
+```bash
+pip install build twine
+python -m build                 # produces dist/*.whl and dist/*.tar.gz
+twine upload dist/*             # needs a PyPI account + API token
+```
+
+A few things to know before you publish:
+
+- **Pick a unique name.** `rag-base` is generic and may be taken on PyPI. Change `name` in [pyproject.toml](pyproject.toml) (and the `[project.urls]`) to something unique; the import package (`rag/`) can stay as is.
+- **Runtime services aren't Python deps.** The wheel installs the pipeline, CLI, and the bundled eval set. Ollama (and optionally Qdrant, via `pip install rag-base[qdrant]`) are external services the user runs separately — the same model every RAG library follows.
+- **Data paths are working-directory relative** (`data/corpus`, `data/index`, ...). After a plain `pip install` there's no corpus yet, so a user runs `rag scrape` to build one in their current directory, then `rag ingest`. Override locations with `RAG_CORPUS_DIR` / `RAG_INDEX_DIR` if desired.
+- Bump `version` on every release; PyPI rejects re-uploads of an existing version.
 
 ## Troubleshooting
 

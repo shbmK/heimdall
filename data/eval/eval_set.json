@@ -20,9 +20,9 @@
     {
       "id": "q03",
       "category": "factual",
-      "question": "Who murdered Bruce Wayne's parents?",
+      "question": "Who is Bruce Wayne's loyal butler?",
       "relevant_docs": ["dc__batman.md"],
-      "reference_answer": "Bruce Wayne's parents, Thomas and Martha Wayne, were murdered by Joe Chill.",
+      "reference_answer": "Bruce Wayne's loyal butler is Alfred Pennyworth.",
       "answerable": true
     },
     {
@@ -256,6 +256,14 @@
       "relevant_docs": [],
       "reference_answer": "Movie casting is not covered by the comics knowledge base; the assistant should say it does not know.",
       "answerable": false
+    },
+    {
+      "id": "q33",
+      "category": "factual",
+      "question": "What underwater kingdom does Aquaman rule?",
+      "relevant_docs": ["dc__aquaman.md"],
+      "reference_answer": "Aquaman rules the undersea kingdom of Atlantis.",
+      "answerable": true
     }
   ]
 }

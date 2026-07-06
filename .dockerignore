@@ -1,0 +1,15 @@
+# keep the build context small and free of local/generated cruft
+.git
+.venv
+venv
+.ollama-runtime
+__pycache__
+**/__pycache__
+*.pyc
+*.egg-info
+build
+dist
+
+# regenerated at runtime, not needed in the image
+data/index
+eval_results.json

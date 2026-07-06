@@ -1,0 +1,69 @@
+services:
+  ollama:
+    image: ollama/ollama:0.31.1
+    restart: unless-stopped
+    # bound to localhost only: ollama has no auth, don't expose it to the network
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    # gpu acceleration needs the nvidia container toolkit on the host; uncomment to enable
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # one-shot: pull the models into the shared volume, then exit
+  ollama-init:
+    image: ollama/ollama:0.31.1
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama pull ${RAG_EMBED_MODEL:-nomic-embed-text}
+        ollama pull ${RAG_CHAT_MODEL:-llama3.2:3b}
+    restart: "no"
+
+  qdrant:
+    image: qdrant/qdrant:v1.18.2
+    restart: unless-stopped
+    # localhost only: the default qdrant deployment is unauthenticated
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  rag:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+      qdrant:
+        condition: service_started
+    environment:
+      RAG_LLM_PROVIDER: ollama
+      RAG_OLLAMA_HOST: http://ollama:11434
+      RAG_VECTOR_BACKEND: qdrant
+      RAG_QDRANT_URL: http://qdrant:6333
+      RAG_CHAT_MODEL: ${RAG_CHAT_MODEL:-llama3.2:3b}
+      RAG_EMBED_MODEL: ${RAG_EMBED_MODEL:-nomic-embed-text}
+      RAG_AUTO_INGEST: ${RAG_AUTO_INGEST:-1}
+
+volumes:
+  ollama_models:
+  qdrant_storage:

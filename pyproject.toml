@@ -6,13 +6,33 @@ build-backend = "setuptools.build_meta"
 name = "rag-base"
 version = "0.1.0"
 description = "A basic but fully functional local RAG pipeline (Ollama) over Marvel/DC Fandom data, with built-in evaluation metrics."
+readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "rag-base contributors" }]
+keywords = ["rag", "retrieval-augmented-generation", "ollama", "qdrant", "llm", "embeddings", "evaluation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Indexing",
+]
 dependencies = [
     "numpy>=1.26",
     "requests>=2.31",
     "typer>=0.12",
     "rich>=13.7",
 ]
+
+[project.urls]
+Homepage = "https://github.com/your-org/rag-base"
+Repository = "https://github.com/your-org/rag-base"
+Issues = "https://github.com/your-org/rag-base/issues"
+
+[project.optional-dependencies]
+qdrant = ["qdrant-client>=1.9"]
 
 [project.scripts]
 rag = "rag.cli:app"
