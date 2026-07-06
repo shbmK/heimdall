@@ -3,7 +3,7 @@
 A small but fully functional Retrieval-Augmented Generation (RAG) pipeline that runs entirely on your machine:
 
 - **Corpus**: ~50 Marvel and DC character/team articles scraped from the [Marvel](https://marvel.fandom.com) and [DC](https://dc.fandom.com) Fandom wikis via their MediaWiki APIs.
-- **Models**: [Ollama](https://ollama.com) for everything — `nomic-embed-text` for embeddings, `llama3.2:3b` for generation and LLM-as-judge evaluation. No API keys, no cloud.
+- **Models**: pluggable LLM providers. Defaults to [Ollama](https://ollama.com) for everything — `nomic-embed-text` for embeddings, `llama3.2:3b` for generation and LLM-as-judge evaluation (no API keys, no cloud) — and switches to any OpenAI-compatible API with one environment variable.
 - **Vector store**: a tiny numpy cosine-similarity index persisted to disk. No database to run.
 - **Metrics**: built-in evaluation harness with retrieval metrics (Hit Rate, Precision, Recall, MRR, nDCG), generation metrics (faithfulness, relevance, correctness, token F1, abstention accuracy), and latency stats.
 
@@ -107,15 +107,39 @@ Everything is overridable via `RAG_*` environment variables (see [rag/config.py]
 
 | Variable | Default | Meaning |
 |---|---|---|
+| `RAG_LLM_PROVIDER` | `ollama` | LLM backend: `ollama` or `openai` |
 | `RAG_CHAT_MODEL` | `llama3.2:3b` | generation model |
 | `RAG_EMBED_MODEL` | `nomic-embed-text` | embedding model |
 | `RAG_JUDGE_MODEL` | (chat model) | model used for LLM-as-judge metrics |
 | `RAG_TOP_K` | `5` | chunks retrieved per query |
 | `RAG_CHUNK_CHARS` | `1800` | max chunk size (characters) |
 | `RAG_CHUNK_OVERLAP_CHARS` | `250` | overlap between adjacent chunks |
+| `RAG_VECTOR_BACKEND` | `local` | vector store: `local` or `qdrant` |
 | `RAG_OLLAMA_HOST` | `http://127.0.0.1:11434` | Ollama endpoint |
+| `RAG_OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible endpoint |
+| `OPENAI_API_KEY` | (unset) | API key for the `openai` provider |
 
 Example: `RAG_CHAT_MODEL=llama3.1:8b rag ask "..."`.
+
+### Using another model provider (OpenAI-compatible)
+
+The `openai` provider works with OpenAI itself **and** any server that speaks the OpenAI `/v1` API (vLLM, LM Studio, llama.cpp, LiteLLM, ...):
+
+```bash
+# OpenAI
+export RAG_LLM_PROVIDER=openai
+export OPENAI_API_KEY=sk-...
+export RAG_CHAT_MODEL=gpt-4o-mini
+export RAG_EMBED_MODEL=text-embedding-3-small
+rag ingest && rag ask "Who trained Doctor Strange?"
+
+# A local OpenAI-compatible server (no key needed)
+export RAG_LLM_PROVIDER=openai
+export RAG_OPENAI_BASE_URL=http://localhost:1234/v1
+export RAG_CHAT_MODEL=your-local-model
+```
+
+Providers implement the `LLMProvider` interface (`embed`, `generate`, `available_models`, `check_ready`, `describe`) in [rag/llm.py](rag/llm.py), selected by a factory. The pipeline, ingest, and eval code depend only on that interface, so adding another provider (Gemini, Cohere, Bedrock, ...) is a single new subclass plus one line in `create_llm` — no other file changes. Note that switching embedding models changes vector dimensions, so re-run `rag ingest` after changing `RAG_EMBED_MODEL`.
 
 ## Project layout
 
@@ -124,8 +148,8 @@ rag/
 ├── config.py      # all knobs, env-overridable
 ├── scrape.py      # Fandom MediaWiki scraper (retries, manifest, HTML->markdown)
 ├── chunking.py    # markdown-section-aware chunker with overlap
-├── llm.py         # Ollama HTTP client (retries, batching)
-├── store.py       # numpy vector store (cosine, persisted)
+├── llm.py         # pluggable LLM providers: Ollama (default) or OpenAI-compatible
+├── store.py       # pluggable vector stores: local numpy (default) or Qdrant
 ├── ingest.py      # corpus -> chunks -> embeddings -> index
 ├── pipeline.py    # Retriever + RagPipeline (prompt assembly, citations)
 ├── metrics.py     # retrieval metrics, token F1, LLM-as-judge scoring
@@ -133,7 +157,7 @@ rag/
 └── cli.py         # typer CLI: scrape / ingest / ask / chat / eval / info
 ```
 
-Each component hides behind a small interface (the store only knows chunks and vectors, the pipeline only knows the client and store), so swapping the embedder, the store, or the LLM backend is a one-file change.
+Each component hides behind a small interface — `LLMProvider` for embeddings/generation and `BaseVectorStore` for retrieval — each chosen by a factory (`create_llm`, `create_store`/`open_store`). The pipeline, ingest, and eval code depend only on those interfaces, so swapping the LLM backend or the vector store is a one-file change.
 
 ## Troubleshooting
 

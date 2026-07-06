@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass, field
 
 from .config import RagConfig
-from .llm import OllamaClient
+from .llm import LLMProvider
 from .store import BaseVectorStore, SearchHit
 
 SYSTEM_PROMPT = """You are a comics knowledge assistant. Answer the user's question using ONLY the provided context passages about Marvel and DC characters.
@@ -33,7 +33,7 @@ class RagAnswer:
 
 
 class Retriever:
-    def __init__(self, config: RagConfig, client: OllamaClient, store: BaseVectorStore):
+    def __init__(self, config: RagConfig, client: LLMProvider, store: BaseVectorStore):
         self.config = config
         self.client = client
         self.store = store
@@ -44,7 +44,7 @@ class Retriever:
 
 
 class RagPipeline:
-    def __init__(self, config: RagConfig, client: OllamaClient, store: BaseVectorStore):
+    def __init__(self, config: RagConfig, client: LLMProvider, store: BaseVectorStore):
         self.config = config
         self.client = client
         self.retriever = Retriever(config, client, store)

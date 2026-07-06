@@ -10,7 +10,7 @@ from __future__ import annotations
 import math
 import re
 
-from .llm import LLMError, OllamaClient
+from .llm import LLMError, LLMProvider
 
 # --------------------------------------------------------------- retrieval
 
@@ -140,7 +140,7 @@ Answer to evaluate:
 Rating (1-5):"""
 
 
-def _judge(client: OllamaClient, model: str, prompt: str) -> float | None:
+def _judge(client: LLMProvider, model: str, prompt: str) -> float | None:
     """Run a 1-5 judge; returns None if the judge output is unusable."""
     try:
         raw = client.generate(prompt, system=_JUDGE_SYSTEM, model=model, temperature=0.0)
@@ -150,13 +150,13 @@ def _judge(client: OllamaClient, model: str, prompt: str) -> float | None:
     return float(m.group(0)) if m else None
 
 
-def judge_faithfulness(client: OllamaClient, model: str, context: str, answer: str) -> float | None:
+def judge_faithfulness(client: LLMProvider, model: str, context: str, answer: str) -> float | None:
     return _judge(client, model, _FAITHFULNESS_PROMPT.format(context=context[:8000], answer=answer))
 
 
-def judge_relevance(client: OllamaClient, model: str, question: str, answer: str) -> float | None:
+def judge_relevance(client: LLMProvider, model: str, question: str, answer: str) -> float | None:
     return _judge(client, model, _RELEVANCE_PROMPT.format(question=question, answer=answer))
 
 
-def judge_correctness(client: OllamaClient, model: str, question: str, reference: str, answer: str) -> float | None:
+def judge_correctness(client: LLMProvider, model: str, question: str, reference: str, answer: str) -> float | None:
     return _judge(client, model, _CORRECTNESS_PROMPT.format(question=question, reference=reference, answer=answer))

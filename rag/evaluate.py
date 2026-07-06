@@ -11,7 +11,7 @@ from pathlib import Path
 
 from . import metrics
 from .config import RagConfig
-from .llm import OllamaClient
+from .llm import LLMProvider
 from .pipeline import RagPipeline
 
 
@@ -56,7 +56,7 @@ def load_eval_set(path: Path) -> list[EvalItem]:
 
 def evaluate_question(
     pipeline: RagPipeline,
-    client: OllamaClient,
+    client: LLMProvider,
     judge_model: str,
     item: EvalItem,
 ) -> QuestionResult:
@@ -120,7 +120,7 @@ def _aggregate(results: list[QuestionResult]) -> dict:
 
 def run_evaluation(
     config: RagConfig,
-    client: OllamaClient,
+    client: LLMProvider,
     pipeline: RagPipeline,
     limit: int | None = None,
     category: str | None = None,

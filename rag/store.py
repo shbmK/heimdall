@@ -141,7 +141,7 @@ class QdrantVectorStore(BaseVectorStore):
     """Qdrant-backed store. Chunk payloads live in the collection, so no
     local files are needed; ``persist`` is a no-op (Qdrant is durable)."""
 
-    def __init__(self, url: str, collection: str, create: bool = False):
+    def __init__(self, url: str, collection: str, create: bool = False, upsert_batch_size: int = 256):
         try:
             from qdrant_client import QdrantClient
         except ImportError as exc:
@@ -152,6 +152,7 @@ class QdrantVectorStore(BaseVectorStore):
         self.client = QdrantClient(url=url)
         self.collection = collection
         self._next_id = 0
+        self._upsert_batch_size = upsert_batch_size
         if create:
             self._created = False  # collection is (re)created lazily on first add, once we know the dim
             if self.client.collection_exists(collection):
@@ -187,7 +188,14 @@ class QdrantVectorStore(BaseVectorStore):
             for i, c in enumerate(chunks)
         ]
         self._next_id += len(chunks)
-        self.client.upsert(collection_name=self.collection, points=points, wait=True)
+        # Upsert in batches: a single request with all points can exceed
+        # Qdrant's default 32 MB payload limit.
+        for start in range(0, len(points), self._upsert_batch_size):
+            self.client.upsert(
+                collection_name=self.collection,
+                points=points[start : start + self._upsert_batch_size],
+                wait=True,
+            )
 
     def search(self, query_vector: np.ndarray, k: int = 5) -> list[SearchHit]:
         response = self.client.query_points(
@@ -237,7 +245,12 @@ def create_store(config: RagConfig) -> BaseVectorStore:
     configured backend is discarded."""
     _check_backend(config)
     if config.vector_backend == "qdrant":
-        return QdrantVectorStore(config.qdrant_url, config.qdrant_collection, create=True)
+        return QdrantVectorStore(
+            config.qdrant_url,
+            config.qdrant_collection,
+            create=True,
+            upsert_batch_size=config.qdrant_upsert_batch_size,
+        )
     return LocalVectorStore(config.index_dir)
 
 

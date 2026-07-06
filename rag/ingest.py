@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .chunking import Chunk, chunk_document
 from .config import RagConfig
-from .llm import OllamaClient
+from .llm import LLMProvider
 from .store import create_store
 
 
@@ -48,7 +48,7 @@ def load_corpus(corpus_dir: Path) -> list[tuple[str, str, str, dict]]:
     return docs
 
 
-def build_index(config: RagConfig, client: OllamaClient, progress=None) -> IngestStats:
+def build_index(config: RagConfig, client: LLMProvider, progress=None) -> IngestStats:
     docs = load_corpus(config.corpus_dir)
     if not docs:
         raise FileNotFoundError(

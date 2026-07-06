@@ -10,7 +10,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .config import load_config
-from .llm import LLMError, OllamaClient
+from .llm import LLMError, create_llm
 from .store import StoreError, open_store
 
 app = typer.Typer(add_completion=False, help="A basic local RAG over Marvel/DC Fandom data, with metrics.")
@@ -19,7 +19,10 @@ console = Console()
 
 def _client_and_config():
     config = load_config()
-    return config, OllamaClient(config)
+    try:
+        return config, create_llm(config)
+    except LLMError as exc:
+        _fail(str(exc))
 
 
 def _fail(message: str) -> None:
@@ -217,7 +220,7 @@ def info():
     table = Table(title="rag-base configuration")
     table.add_column("Setting")
     table.add_column("Value")
-    table.add_row("Ollama host", config.ollama_host)
+    table.add_row("LLM provider", config.llm_provider)
     table.add_row("Chat model", config.chat_model)
     table.add_row("Embed model", config.embed_model)
     table.add_row("Judge model", config.effective_judge_model())
@@ -236,9 +239,9 @@ def info():
         table.add_row("Index", "[red]not built (run `rag ingest`)[/red]")
     try:
         models = client.available_models()
-        table.add_row("Ollama", f"up ({len(models)} models)")
+        table.add_row("Backend", f"{client.describe()} — up ({len(models)} models)")
     except LLMError:
-        table.add_row("Ollama", "[red]unreachable[/red]")
+        table.add_row("Backend", f"{client.describe()} — [red]unreachable[/red]")
     console.print(table)
 
 

@@ -27,14 +27,21 @@ def _env_float(name: str, default: float) -> float:
 
 @dataclass
 class RagConfig:
-    # Ollama
-    ollama_host: str = field(default_factory=lambda: _env_str("OLLAMA_HOST", "http://127.0.0.1:11434"))
+    # LLM provider: 'ollama' (default, local) or 'openai' (OpenAI-compatible API)
+    llm_provider: str = field(default_factory=lambda: _env_str("LLM_PROVIDER", "ollama"))
     embed_model: str = field(default_factory=lambda: _env_str("EMBED_MODEL", "nomic-embed-text"))
     chat_model: str = field(default_factory=lambda: _env_str("CHAT_MODEL", "llama3.2:3b"))
     # Judge defaults to the chat model; override for a stronger judge if available.
     judge_model: str = field(default_factory=lambda: _env_str("JUDGE_MODEL", ""))
     request_timeout: float = field(default_factory=lambda: _env_float("REQUEST_TIMEOUT", 300.0))
     max_retries: int = field(default_factory=lambda: _env_int("MAX_RETRIES", 3))
+
+    # Ollama provider
+    ollama_host: str = field(default_factory=lambda: _env_str("OLLAMA_HOST", "http://127.0.0.1:11434"))
+
+    # OpenAI-compatible provider
+    openai_base_url: str = field(default_factory=lambda: _env_str("OPENAI_BASE_URL", "https://api.openai.com/v1"))
+    openai_api_key: str = field(default_factory=lambda: _env_str("OPENAI_API_KEY", ""))
 
     # Chunking
     chunk_chars: int = field(default_factory=lambda: _env_int("CHUNK_CHARS", 1800))
@@ -48,6 +55,7 @@ class RagConfig:
     vector_backend: str = field(default_factory=lambda: _env_str("VECTOR_BACKEND", "local"))
     qdrant_url: str = field(default_factory=lambda: _env_str("QDRANT_URL", "http://127.0.0.1:6333"))
     qdrant_collection: str = field(default_factory=lambda: _env_str("QDRANT_COLLECTION", "rag_base"))
+    qdrant_upsert_batch_size: int = field(default_factory=lambda: _env_int("QDRANT_UPSERT_BATCH_SIZE", 256))
 
     # Generation
     temperature: float = field(default_factory=lambda: _env_float("TEMPERATURE", 0.0))
