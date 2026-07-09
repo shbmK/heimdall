@@ -15,6 +15,7 @@ import requests
 from .chunking import chunk_document
 from .config import RagConfig
 from .llm import LLMProvider
+from .logging_config import get_logger
 from .scrape import (
     USER_AGENT,
     WIKIS,
@@ -25,6 +26,8 @@ from .scrape import (
     slugify,
 )
 from .store import BaseVectorStore
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -78,7 +81,17 @@ def _search_wiki(
         except (requests.RequestException, ValueError, KeyError, TypeError) as exc:
             last_error = exc
             if attempt < retries - 1:
-                time.sleep(2**attempt)
+                backoff = 2**attempt
+                logger.warning(
+                    "fandom search wiki=%s attempt=%d/%d backoff_s=%d error=%s",
+                    wiki,
+                    attempt + 1,
+                    retries,
+                    backoff,
+                    exc,
+                )
+                time.sleep(backoff)
+    logger.error("fandom search wiki=%s attempts=%d error=%s", wiki, retries, last_error)
     raise RuntimeError(f"Fandom search failed on {wiki}: {last_error}")
 
 
@@ -146,29 +159,34 @@ def fetch_and_ingest(
     query: str,
 ) -> FallbackResult:
     """Search Fandom for ``query``, ingest the best page, append to the store."""
+    logger.info("fallback search %s", query[:120])
     session = requests.Session()
     session.headers["User-Agent"] = USER_AGENT
 
     all_hits: list[tuple[str, str, float]] = []
     for wiki in WIKIS:
         try:
-            all_hits.extend(
-                _search_wiki(session, wiki, query, limit=config.fallback_max_results)
-            )
-        except RuntimeError:
+            wiki_hits = _search_wiki(session, wiki, query, limit=config.fallback_max_results)
+            all_hits.extend(wiki_hits)
+            logger.debug("fallback search wiki=%s hits=%d", wiki, len(wiki_hits))
+        except RuntimeError as exc:
+            logger.warning("fallback search wiki=%s skipped error=%s", wiki, exc)
             continue  # one wiki down should not abort the other
         time.sleep(config.scrape_delay_seconds)
 
     best = _pick_best_hit(all_hits, query=query)
     if best is None:
+        logger.warning("fallback no results query=%s", query[:80])
         return FallbackResult(ok=False, error="no Fandom search results")
 
     wiki, title = best
+    logger.info("fallback hit wiki=%s title=%s hits=%d", wiki, title, len(all_hits))
     slug = slugify(title)
     doc_id = _doc_id_for(wiki, title)
     corpus_path = config.corpus_dir / doc_id
 
     if corpus_path.exists():
+        logger.info("fallback skipped doc=%s", doc_id)
         return FallbackResult(
             ok=False,
             doc_id=doc_id,
@@ -184,6 +202,7 @@ def fetch_and_ingest(
         resolved_title, html = _fetch_page_html(session, base_url, title)
         body = html_to_markdown(html, max_chars=config.max_doc_chars)
         if len(body) < 500:
+            logger.warning("fallback short body chars=%d title=%s", len(body), title)
             return FallbackResult(
                 ok=False,
                 doc_id=doc_id,
@@ -198,6 +217,7 @@ def fetch_and_ingest(
         doc_id = f"{wiki}__{slug}.md"
         corpus_path = config.corpus_dir / doc_id
         if corpus_path.exists():
+            logger.info("fallback skipped doc=%s", doc_id)
             return FallbackResult(
                 ok=False,
                 doc_id=doc_id,
@@ -224,6 +244,7 @@ def fetch_and_ingest(
             },
         )
         if not chunks:
+            logger.warning("fallback no chunks doc=%s", doc_id)
             return FallbackResult(
                 ok=False,
                 doc_id=doc_id,
@@ -237,6 +258,7 @@ def fetch_and_ingest(
         store.add(chunks, embeddings)
         store.persist()
 
+        logger.info("fallback ingested doc=%s chunks=%d url=%s", doc_id, len(chunks), url)
         return FallbackResult(
             ok=True,
             doc_id=doc_id,
@@ -246,6 +268,7 @@ def fetch_and_ingest(
             chunks_added=len(chunks),
         )
     except Exception as exc:  # noqa: BLE001 — fallback must not crash ask/chat
+        logger.error("fallback error wiki=%s title=%s error=%s", wiki, title, exc)
         return FallbackResult(
             ok=False,
             doc_id=doc_id,

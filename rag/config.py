@@ -85,6 +85,11 @@ class RagConfig:
     scrape_delay_seconds: float = field(default_factory=lambda: _env_float("SCRAPE_DELAY_SECONDS", 0.5))
     max_doc_chars: int = field(default_factory=lambda: _env_int("MAX_DOC_CHARS", 60000))
 
+    # Logging: level is any standard name (DEBUG/INFO/WARNING/ERROR); log_file,
+    # when set, mirrors logs to that path in addition to the console.
+    log_level: str = field(default_factory=lambda: _env_str("LOG_LEVEL", "INFO"))
+    log_file: str = field(default_factory=lambda: _env_str("LOG_FILE", ""))
+
     def effective_judge_model(self) -> str:
         return self.judge_model or self.chat_model
 

@@ -9,7 +9,10 @@ from pathlib import Path
 from .chunking import Chunk, chunk_document
 from .config import RagConfig
 from .llm import LLMProvider
+from .logging_config import get_logger
 from .store import create_store
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -51,9 +54,11 @@ def load_corpus(corpus_dir: Path) -> list[tuple[str, str, str, dict]]:
 def build_index(config: RagConfig, client: LLMProvider, progress=None) -> IngestStats:
     docs = load_corpus(config.corpus_dir)
     if not docs:
+        logger.error("corpus empty path=%s", config.corpus_dir)
         raise FileNotFoundError(
             f"No .md/.txt documents in {config.corpus_dir}. Run `rag scrape` first (or drop your own files there)."
         )
+    logger.info("corpus docs=%d", len(docs))
 
     all_chunks: list[Chunk] = []
     for doc_id, title, body, meta in docs:
@@ -66,14 +71,23 @@ def build_index(config: RagConfig, client: LLMProvider, progress=None) -> Ingest
             metadata={"title": title, "universe": meta.get("universe", ""), "source": meta.get("source", "")},
         )
         all_chunks.extend(chunks)
+        logger.debug("chunked doc_id=%s chunks=%d", doc_id, len(chunks))
         if progress:
             progress(doc_id, len(chunks))
 
+    logger.info("chunked docs=%d chunks=%d", len(docs), len(all_chunks))
     store = create_store(config)
     embeddings = client.embed([c.text for c in all_chunks])
     store.add(all_chunks, embeddings)
     store.persist()
     location = config.qdrant_url if config.vector_backend == "qdrant" else str(config.index_dir)
+    logger.info(
+        "ingest done docs=%d chunks=%d backend=%s location=%s",
+        len(docs),
+        len(all_chunks),
+        config.vector_backend,
+        location,
+    )
     return IngestStats(
         documents=len(docs), chunks=len(all_chunks), backend=config.vector_backend, location=location
     )

@@ -23,6 +23,9 @@ from pathlib import Path
 import requests
 
 from .config import RagConfig
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 USER_AGENT = "rag-base/0.1 (educational RAG demo; https://github.com/)"
 
@@ -245,7 +248,17 @@ def _fetch_page_html(session: requests.Session, base_url: str, title: str, retri
         except (requests.RequestException, ValueError, KeyError) as exc:
             last_error = exc
             if attempt < retries - 1:
-                time.sleep(2**attempt)
+                backoff = 2**attempt
+                logger.warning(
+                    "fetch title=%s attempt=%d/%d backoff_s=%d error=%s",
+                    title,
+                    attempt + 1,
+                    retries,
+                    backoff,
+                    exc,
+                )
+                time.sleep(backoff)
+    logger.error("fetch title=%s attempts=%d error=%s", title, retries, last_error)
     raise RuntimeError(f"failed to fetch '{title}': {last_error}")
 
 
@@ -276,8 +289,10 @@ def scrape_page(
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(header + body + "\n", encoding="utf-8")
+        logger.info("scrape ok wiki=%s title=%s resolved=%s chars=%d", wiki, title, resolved_title, len(body))
         return ScrapeResult(wiki=wiki, title=resolved_title, slug=slug, ok=True, path=str(path), url=url, chars=len(body))
     except Exception as exc:  # noqa: BLE001 — per-page isolation is the point
+        logger.warning("scrape fail wiki=%s title=%s error=%s", wiki, title, exc)
         return ScrapeResult(wiki=wiki, title=title, slug=slug, ok=False, url=url, error=str(exc))
 
 
@@ -299,6 +314,7 @@ def scrape_all(
         jobs.extend((wiki, title, slug) for title, slug in entries)
     jobs.extend(extra or [])
 
+    logger.info("scrape pages=%d wiki=%s", len(jobs), only_wiki or "all")
     results: list[ScrapeResult] = []
     for wiki, title, slug in jobs:
         result = scrape_page(session, config, wiki, title, slug)
@@ -308,6 +324,8 @@ def scrape_all(
         time.sleep(config.scrape_delay_seconds)
 
     _update_manifest(config, results)
+    ok = sum(1 for r in results if r.ok)
+    logger.info("scrape done ok=%d failed=%d", ok, len(results) - ok)
     return results
 
 
@@ -333,6 +351,7 @@ def _update_manifest(config: RagConfig, results: list[ScrapeResult]) -> None:
     }
     config.corpus_dir.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    logger.debug("manifest pages=%d ok=%d failed=%d", len(ordered), manifest["ok"], manifest["failed"])
 
 
 def slugify(name: str) -> str:

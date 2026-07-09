@@ -25,6 +25,9 @@ import numpy as np
 import requests
 
 from .config import RagConfig
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class LLMError(RuntimeError):
@@ -51,7 +54,17 @@ def _request_with_retries(
         except (requests.RequestException, ValueError) as exc:
             last_error = exc
             if attempt < max_retries - 1:
-                time.sleep(2**attempt)
+                backoff = 2**attempt
+                logger.warning(
+                    "%s attempt=%d/%d backoff_s=%d error=%s",
+                    label,
+                    attempt + 1,
+                    max_retries,
+                    backoff,
+                    exc,
+                )
+                time.sleep(backoff)
+    logger.error("%s attempts=%d error=%s", label, max_retries, last_error)
     raise LLMError(f"{label} failed after {max_retries} attempts: {last_error}")
 
 
@@ -120,6 +133,7 @@ class OllamaProvider(LLMProvider):
         available = self.available_models()
         missing = [m for m in models if m not in available and f"{m}:latest" not in available]
         if missing:
+            logger.error("ollama missing models=%s available=%d", ", ".join(missing), len(available))
             raise LLMError(
                 f"Missing Ollama models: {', '.join(missing)}. "
                 f"Run: {'; '.join(f'ollama pull {m}' for m in missing)}"
@@ -130,14 +144,19 @@ class OllamaProvider(LLMProvider):
             return np.zeros((0, 0), dtype=np.float32)
         vectors: list[list[float]] = []
         batch_size = self.config.embed_batch_size
-        for start in range(0, len(texts), batch_size):
-            batch = texts[start : start + batch_size]
+        logger.debug("ollama embed texts=%d batch_size=%d model=%s", len(texts), batch_size, self.config.embed_model)
+        start = time.perf_counter()
+        for start_idx in range(0, len(texts), batch_size):
+            batch = texts[start_idx : start_idx + batch_size]
             data = self._post("/api/embed", {"model": self.config.embed_model, "input": batch})
             embeddings = data.get("embeddings")
             if not embeddings or len(embeddings) != len(batch):
                 raise LLMError(f"Embedding API returned {len(embeddings or [])} vectors for {len(batch)} inputs")
             vectors.extend(embeddings)
-        return np.asarray(vectors, dtype=np.float32)
+        elapsed = time.perf_counter() - start
+        result = np.asarray(vectors, dtype=np.float32)
+        logger.info("ollama embed texts=%d dim=%d elapsed_s=%.2f", len(texts), result.shape[1] if result.size else 0, elapsed)
+        return result
 
     def generate(
         self,
@@ -150,17 +169,22 @@ class OllamaProvider(LLMProvider):
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
+        model_name = model or self.config.chat_model
+        logger.debug("ollama generate model=%s prompt_chars=%d", model_name, len(prompt))
+        start = time.perf_counter()
         data = self._post(
             "/api/chat",
             {
-                "model": model or self.config.chat_model,
+                "model": model_name,
                 "messages": messages,
                 "stream": False,
                 "options": {"temperature": self.config.temperature if temperature is None else temperature},
             },
         )
         try:
-            return data["message"]["content"].strip()
+            text = data["message"]["content"].strip()
+            logger.info("ollama generate model=%s response_chars=%d elapsed_s=%.2f", model_name, len(text), time.perf_counter() - start)
+            return text
         except (KeyError, TypeError) as exc:
             raise LLMError(f"Unexpected chat response shape: {data}") from exc
 
@@ -217,6 +241,7 @@ class OpenAIProvider(LLMProvider):
         if available:
             missing = [m for m in models if m not in available]
             if missing:
+                logger.error("openai missing models=%s", ", ".join(missing))
                 raise LLMError(
                     f"Models not available on {self.base_url}: {', '.join(missing)}. "
                     f"Available: {', '.join(sorted(available)[:10])}..."
@@ -227,14 +252,19 @@ class OpenAIProvider(LLMProvider):
             return np.zeros((0, 0), dtype=np.float32)
         vectors: list[list[float]] = []
         batch_size = self.config.embed_batch_size
-        for start in range(0, len(texts), batch_size):
-            batch = texts[start : start + batch_size]
+        logger.debug("openai embed texts=%d batch_size=%d model=%s", len(texts), batch_size, self.config.embed_model)
+        start = time.perf_counter()
+        for start_idx in range(0, len(texts), batch_size):
+            batch = texts[start_idx : start_idx + batch_size]
             data = self._post("/embeddings", {"model": self.config.embed_model, "input": batch})
             items = sorted(data.get("data", []), key=lambda d: d.get("index", 0))
             if len(items) != len(batch):
                 raise LLMError(f"Embedding API returned {len(items)} vectors for {len(batch)} inputs")
             vectors.extend(item["embedding"] for item in items)
-        return np.asarray(vectors, dtype=np.float32)
+        elapsed = time.perf_counter() - start
+        result = np.asarray(vectors, dtype=np.float32)
+        logger.info("openai embed texts=%d dim=%d elapsed_s=%.2f", len(texts), result.shape[1] if result.size else 0, elapsed)
+        return result
 
     def generate(
         self,
@@ -247,16 +277,21 @@ class OpenAIProvider(LLMProvider):
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
+        model_name = model or self.config.chat_model
+        logger.debug("openai generate model=%s prompt_chars=%d", model_name, len(prompt))
+        start = time.perf_counter()
         data = self._post(
             "/chat/completions",
             {
-                "model": model or self.config.chat_model,
+                "model": model_name,
                 "messages": messages,
                 "temperature": self.config.temperature if temperature is None else temperature,
             },
         )
         try:
-            return data["choices"][0]["message"]["content"].strip()
+            text = data["choices"][0]["message"]["content"].strip()
+            logger.info("openai generate model=%s response_chars=%d elapsed_s=%.2f", model_name, len(text), time.perf_counter() - start)
+            return text
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMError(f"Unexpected chat response shape: {data}") from exc
 
@@ -272,6 +307,7 @@ _PROVIDERS = ("ollama", "openai")
 
 def create_llm(config: RagConfig) -> LLMProvider:
     provider = config.llm_provider
+    logger.info("llm provider=%s", provider)
     if provider == "ollama":
         return OllamaProvider(config)
     if provider == "openai":

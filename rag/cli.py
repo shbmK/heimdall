@@ -11,10 +11,30 @@ from rich.table import Table
 
 from .config import load_config
 from .llm import LLMError, create_llm
+from .logging_config import configure_logging, get_logger
 from .store import StoreError, open_store
 
 app = typer.Typer(add_completion=False, help="A basic local RAG over Marvel/DC Fandom data, with metrics.")
 console = Console()
+logger = get_logger(__name__)
+
+
+@app.callback()
+def _init(
+    log_level: Optional[str] = typer.Option(
+        None, "--log-level", help="Logging level: DEBUG, INFO, WARNING, ERROR (default from RAG_LOG_LEVEL or INFO)."
+    ),
+    log_file: Optional[str] = typer.Option(
+        None, "--log-file", help="Mirror logs to this file in addition to the console."
+    ),
+):
+    """Configure logging before any command runs."""
+    config = load_config()
+    if log_level:
+        config.log_level = log_level
+    if log_file:
+        config.log_file = log_file
+    configure_logging(config)
 
 
 def _client_and_config():
@@ -22,10 +42,12 @@ def _client_and_config():
     try:
         return config, create_llm(config)
     except LLMError as exc:
+        logger.error("llm init failed error=%s", exc)
         _fail(str(exc))
 
 
 def _fail(message: str) -> None:
+    logger.error("command failed error=%s", message)
     console.print(f"[bold red]Error:[/bold red] {message}")
     raise typer.Exit(code=1)
 
@@ -39,6 +61,7 @@ def scrape(
     from .scrape import WIKIS, scrape_all, slugify
 
     config = load_config()
+    logger.info("scrape wiki=%s character=%s", wiki or "all", character or "-")
     if wiki and wiki not in WIKIS:
         _fail(f"Unknown wiki '{wiki}'. Choose from: {', '.join(WIKIS)}")
 
@@ -70,6 +93,7 @@ def ingest():
     from .ingest import build_index
 
     config, client = _client_and_config()
+    logger.info("ingest corpus=%s backend=%s", config.corpus_dir, config.vector_backend)
     try:
         client.check_ready([config.embed_model])
     except LLMError as exc:
@@ -100,6 +124,7 @@ def _load_pipeline():
         store = open_store(config)
     except (LLMError, StoreError) as exc:
         _fail(str(exc))
+    logger.info("pipeline backend=%s chunks=%d", config.vector_backend, store.count())
     return config, client, RagPipeline(config, client, store)
 
 
@@ -132,6 +157,7 @@ def ask(
 ):
     """Ask a single question against the indexed corpus."""
     config, client, pipeline = _load_pipeline()
+    logger.info("ask k=%s %s", k or config.top_k, question[:120])
     with console.status("Thinking..."):
         result = pipeline.answer(question, k=k)
     _print_answer(result, sources)
@@ -141,6 +167,7 @@ def ask(
 def chat():
     """Interactive question loop (each question is independent)."""
     config, client, pipeline = _load_pipeline()
+    logger.info("chat started")
     console.print("[bold]RAG chat[/bold] — ask about Marvel/DC characters. Ctrl-D or 'exit' to quit.\n")
     while True:
         try:
@@ -149,9 +176,11 @@ def chat():
             break
         if not question or question.lower() in {"exit", "quit"}:
             break
+        logger.info("chat %s", question[:120])
         with console.status("Thinking..."):
             result = pipeline.answer(question)
         _print_answer(result, show_sources=False)
+    logger.info("chat ended")
     console.print("bye")
 
 
@@ -164,6 +193,7 @@ def eval_cmd(
     from .evaluate import run_evaluation
 
     config, client, pipeline = _load_pipeline()
+    logger.info("eval limit=%s category=%s", limit or "none", category or "all")
 
     def report(result):
         marker = "[green]ok[/green]" if not result.scores.get("abstained") else "[yellow]abstained[/yellow]"
@@ -222,6 +252,7 @@ def eval_cmd(
 def info():
     """Show current configuration and index status."""
     config, client = _client_and_config()
+    logger.info("info")
     table = Table(title="rag-base configuration")
     table.add_column("Setting")
     table.add_column("Value")

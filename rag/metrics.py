@@ -11,6 +11,9 @@ import math
 import re
 
 from .llm import LLMError, LLMProvider
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # --------------------------------------------------------------- retrieval
 
@@ -144,10 +147,14 @@ def _judge(client: LLMProvider, model: str, prompt: str) -> float | None:
     """Run a 1-5 judge; returns None if the judge output is unusable."""
     try:
         raw = client.generate(prompt, system=_JUDGE_SYSTEM, model=model, temperature=0.0)
-    except LLMError:
+    except LLMError as exc:
+        logger.warning("judge failed model=%s error=%s", model, exc)
         return None
     m = re.search(r"[1-5]", raw)
-    return float(m.group(0)) if m else None
+    if m:
+        return float(m.group(0))
+    logger.warning("judge bad output model=%s output=%r", model, raw[:200])
+    return None
 
 
 def judge_faithfulness(client: LLMProvider, model: str, context: str, answer: str) -> float | None:

@@ -15,7 +15,10 @@ import numpy as np
 from .config import RagConfig
 from .fallback import FallbackResult, fetch_and_ingest
 from .llm import LLMProvider
+from .logging_config import get_logger
 from .store import BaseVectorStore, SearchHit
+
+logger = get_logger(__name__)
 
 SYSTEM_PROMPT = """You are a comics knowledge assistant. Answer the user's question using ONLY the provided context passages about Marvel and DC characters.
 
@@ -72,14 +75,18 @@ class Retriever:
         key = (self.config.embed_model, query.strip().lower())
         cached = self._embed_cache.get(key)
         if cached is not None:
+            logger.debug("embed cache hit model=%s", self.config.embed_model)
             return cached
+        logger.debug("embed cache miss model=%s chars=%d", self.config.embed_model, len(query))
         vector = self.client.embed([query])[0]
         self._embed_cache.put(key, vector)
         return vector
 
     def retrieve(self, query: str, k: int | None = None) -> list[SearchHit]:
+        k = k or self.config.top_k
         query_vector = self.embed_query(query)
-        return self.store.search(query_vector, k=k or self.config.top_k)
+        hits = self.store.search(query_vector, k=k)
+        return hits
 
     def retrieve_with_vector(
         self, query_vector: np.ndarray, k: int | None = None
@@ -97,6 +104,7 @@ class RagPipeline:
     def _build_prompt(self, question: str, hits: list[SearchHit]) -> str:
         parts = []
         budget = self.config.max_context_chars
+        used_hits = 0
         for i, hit in enumerate(hits, start=1):
             passage = hit.chunk.text
             if len(passage) > budget:
@@ -104,9 +112,12 @@ class RagPipeline:
             budget -= len(passage)
             source = hit.chunk.metadata.get("title", hit.chunk.doc_id)
             parts.append(f"[{i}] (from: {source})\n{passage}")
+            used_hits = i
             if budget <= 0:
+                logger.debug("context budget exhausted hits=%d/%d", used_hits, len(hits))
                 break
         context = "\n\n---\n\n".join(parts)
+        logger.debug("prompt hits=%d chars=%d", used_hits, len(context))
         return f"Context passages:\n\n{context}\n\nQuestion: {question}"
 
     @staticmethod
@@ -117,28 +128,62 @@ class RagPipeline:
 
     def _try_fallback(self, question: str) -> FallbackResult | None:
         if not self.config.fallback_enabled:
+            logger.debug("fallback disabled")
             return None
         return fetch_and_ingest(self.config, self.client, self.store, question)
 
     def answer(self, question: str, k: int | None = None) -> RagAnswer:
+        k = k or self.config.top_k
+        logger.info("query k=%d %s", k, question[:120])
         start = time.perf_counter()
         query_vector = self.retriever.embed_query(question)
         hits = self.retriever.retrieve_with_vector(query_vector, k=k)
 
+        max_score = max((h.score for h in hits), default=0.0)
+        logger.info(
+            "retrieve hits=%d max_score=%.4f threshold=%.4f docs=%s",
+            len(hits),
+            max_score,
+            self.config.fallback_min_score,
+            [h.chunk.doc_id for h in hits[:3]],
+        )
+
         fallback_used = False
         fallback_doc = ""
         if self._needs_fallback(hits, self.config.fallback_min_score):
+            logger.warning(
+                "low score max=%.4f threshold=%.4f",
+                max_score,
+                self.config.fallback_min_score,
+            )
             result = self._try_fallback(question)
             if result is not None and result.ok:
                 fallback_used = True
                 fallback_doc = result.doc_id
+                logger.info("fallback ok doc=%s chunks=%d", result.doc_id, result.chunks_added)
                 hits = self.retriever.retrieve_with_vector(query_vector, k=k)
+                max_score = max((h.score for h in hits), default=0.0)
+                logger.info("retrieve post-fallback hits=%d max_score=%.4f", len(hits), max_score)
+            elif result is not None:
+                logger.warning(
+                    "fallback failed skipped_existing=%s error=%s",
+                    result.skipped_existing,
+                    result.error,
+                )
 
         retrieval_seconds = time.perf_counter() - start
 
         prompt = self._build_prompt(question, hits)
         text = self.client.generate(prompt, system=SYSTEM_PROMPT)
         total_seconds = time.perf_counter() - start
+
+        logger.info(
+            "query done retrieval_ms=%.0f total_s=%.2f fallback=%s answer_chars=%d",
+            retrieval_seconds * 1000,
+            total_seconds,
+            fallback_used,
+            len(text),
+        )
 
         sources = [
             {

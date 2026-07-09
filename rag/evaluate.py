@@ -12,7 +12,10 @@ from pathlib import Path
 from . import metrics
 from .config import RagConfig
 from .llm import LLMProvider
+from .logging_config import get_logger
 from .pipeline import RagPipeline
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -60,6 +63,7 @@ def evaluate_question(
     judge_model: str,
     item: EvalItem,
 ) -> QuestionResult:
+    logger.debug("eval id=%s category=%s", item.id, item.category)
     result = pipeline.answer(item.question)
     retrieved_docs = [h.chunk.doc_id for h in result.hits]
     relevant = set(item.relevant_docs)
@@ -86,6 +90,13 @@ def evaluate_question(
         abstained = metrics.is_abstention(result.answer)
         scores["abstention_correct"] = 1.0 if abstained else 0.0
 
+    logger.debug(
+        "eval id=%s retrieval_s=%.2f total_s=%.2f scores=%s",
+        item.id,
+        result.retrieval_seconds,
+        result.total_seconds,
+        {k: v for k, v in scores.items() if v is not None},
+    )
     return QuestionResult(
         item=item,
         answer=result.answer,
@@ -135,6 +146,13 @@ def run_evaluation(
         raise ValueError("No eval questions match the given filters")
 
     judge_model = config.effective_judge_model()
+    logger.info(
+        "eval questions=%d judge=%s category=%s limit=%s",
+        len(items),
+        judge_model,
+        category or "all",
+        limit or "none",
+    )
     results: list[QuestionResult] = []
     for item in items:
         result = evaluate_question(pipeline, client, judge_model, item)
@@ -175,4 +193,10 @@ def run_evaluation(
     }
     config.eval_results_path.parent.mkdir(parents=True, exist_ok=True)
     config.eval_results_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    logger.info(
+        "eval done questions=%d path=%s hit_rate=%s",
+        len(results),
+        config.eval_results_path,
+        report["overall"].get("hit_rate", "-"),
+    )
     return report

@@ -27,6 +27,9 @@ import numpy as np
 
 from .chunking import Chunk
 from .config import RagConfig
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 _VECTORS_FILE = "vectors.npz"
 _CHUNKS_FILE = "chunks.json"
@@ -91,6 +94,7 @@ class LocalVectorStore(BaseVectorStore):
         normalized = _normalize_rows(embeddings.astype(np.float32))
         self.vectors = normalized if self.vectors is None else np.vstack([self.vectors, normalized])
         self.chunks.extend(chunks)
+        logger.info("local add chunks=%d total=%d", len(chunks), len(self.chunks))
 
     def search(self, query_vector: np.ndarray, k: int = 5) -> list[SearchHit]:
         if self.vectors is None or not self.chunks:
@@ -98,7 +102,14 @@ class LocalVectorStore(BaseVectorStore):
         query = _normalize_vector(query_vector)
         scores = self.vectors @ query
         top = np.argsort(-scores)[:k]
-        return [SearchHit(chunk=self.chunks[i], score=float(scores[i])) for i in top]
+        hits = [SearchHit(chunk=self.chunks[i], score=float(scores[i])) for i in top]
+        logger.debug(
+            "local search k=%d top_score=%.4f docs=%s",
+            k,
+            hits[0].score if hits else 0.0,
+            [h.chunk.doc_id for h in hits[:3]],
+        )
+        return hits
 
     def persist(self) -> None:
         if self.vectors is None:
@@ -116,6 +127,7 @@ class LocalVectorStore(BaseVectorStore):
             for c in self.chunks
         ]
         (self.index_dir / _CHUNKS_FILE).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        logger.info("local persisted chunks=%d path=%s", len(self.chunks), self.index_dir)
 
     def count(self) -> int:
         return len(self.chunks)
@@ -131,6 +143,7 @@ class LocalVectorStore(BaseVectorStore):
         store.chunks = [Chunk(**item) for item in json.loads(chunks_path.read_text(encoding="utf-8"))]
         if store.vectors.shape[0] != len(store.chunks):
             raise StoreError("Corrupt index: vector/chunk count mismatch. Re-run `rag ingest`.")
+        logger.info("local opened chunks=%d path=%s", len(store.chunks), index_dir)
         return store
 
 
@@ -194,11 +207,14 @@ class QdrantVectorStore(BaseVectorStore):
         # Upsert in batches: a single request with all points can exceed
         # Qdrant's default 32 MB payload limit.
         for start in range(0, len(points), self._upsert_batch_size):
+            batch = points[start : start + self._upsert_batch_size]
             self.client.upsert(
                 collection_name=self.collection,
-                points=points[start : start + self._upsert_batch_size],
+                points=batch,
                 wait=True,
             )
+            logger.debug("qdrant upsert batch=%d-%d total=%d", start + 1, start + len(batch), len(points))
+        logger.info("qdrant add points=%d total=%d", len(chunks), self._next_id)
 
     def search(self, query_vector: np.ndarray, k: int = 5) -> list[SearchHit]:
         response = self.client.query_points(
@@ -222,6 +238,12 @@ class QdrantVectorStore(BaseVectorStore):
                     score=float(point.score),
                 )
             )
+        logger.debug(
+            "qdrant search k=%d top_score=%.4f docs=%s",
+            k,
+            hits[0].score if hits else 0.0,
+            [h.chunk.doc_id for h in hits[:3]],
+        )
         return hits
 
     def persist(self) -> None:
@@ -248,12 +270,14 @@ def create_store(config: RagConfig) -> BaseVectorStore:
     configured backend is discarded."""
     _check_backend(config)
     if config.vector_backend == "qdrant":
+        logger.info("qdrant create url=%s collection=%s", config.qdrant_url, config.qdrant_collection)
         return QdrantVectorStore(
             config.qdrant_url,
             config.qdrant_collection,
             create=True,
             upsert_batch_size=config.qdrant_upsert_batch_size,
         )
+    logger.info("local create path=%s", config.index_dir)
     return LocalVectorStore(config.index_dir)
 
 
@@ -261,5 +285,7 @@ def open_store(config: RagConfig) -> BaseVectorStore:
     """Open the existing index for querying. Raises StoreError if absent."""
     _check_backend(config)
     if config.vector_backend == "qdrant":
+        logger.debug("qdrant open url=%s collection=%s", config.qdrant_url, config.qdrant_collection)
         return QdrantVectorStore(config.qdrant_url, config.qdrant_collection, create=False)
+    logger.debug("local open path=%s", config.index_dir)
     return LocalVectorStore.open(config.index_dir)

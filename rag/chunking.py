@@ -12,6 +12,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class Chunk:
@@ -79,7 +83,8 @@ def chunk_document(
     metadata: dict | None = None,
 ) -> list[Chunk]:
     chunks: list[Chunk] = []
-    for section_title, body in _split_sections(text):
+    sections = _split_sections(text)
+    for section_title, body in sections:
         for piece in _split_long_text(body, max_chars=max_chars, overlap_chars=overlap_chars):
             header = f"[{title}]" + (f" — {section_title}" if section_title else "")
             chunks.append(
@@ -91,4 +96,5 @@ def chunk_document(
                     metadata=dict(metadata or {}),
                 )
             )
+    logger.debug("chunk doc=%s sections=%d chunks=%d max_chars=%d", doc_id, len(sections), len(chunks), max_chars)
     return chunks
