@@ -161,6 +161,9 @@ class QdrantVectorStore(BaseVectorStore):
             raise StoreError(
                 f"Qdrant collection '{collection}' does not exist at {url}. Run `rag ingest` first."
             )
+        else:
+            # Continue IDs past existing points so incremental add (fallback) does not overwrite.
+            self._next_id = self.client.count(collection, exact=True).count
 
     def _ensure_collection(self, dim: int) -> None:
         if not self.client.collection_exists(self.collection):

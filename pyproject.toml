@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{ name = "rag-base contributors" }]
+authors = [{ name = "shbmk" }]
 keywords = ["rag", "retrieval-augmented-generation", "ollama", "qdrant", "llm", "embeddings", "evaluation"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -27,10 +27,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/rag-base"
-Repository = "https://github.com/your-org/rag-base"
-Issues = "https://github.com/your-org/rag-base/issues"
-
+Repository = "https://github.com/shbmk/rag-base"
 [project.optional-dependencies]
 qdrant = ["qdrant-client>=1.9"]
 

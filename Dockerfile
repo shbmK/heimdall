@@ -5,7 +5,6 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# install deps first so code changes don't bust the dependency layer
 COPY pyproject.toml README.md LICENSE ./
 COPY rag ./rag
 RUN pip install ".[qdrant]"
@@ -21,7 +20,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
     && chown -R appuser:appuser /app
 USER appuser
 
-# talk to the other services by name on the compose network
 ENV RAG_LLM_PROVIDER=ollama \
     RAG_OLLAMA_HOST=http://ollama:11434 \
     RAG_VECTOR_BACKEND=qdrant \

@@ -25,6 +25,13 @@ def _env_float(name: str, default: float) -> float:
     return float(raw) if raw else default
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(f"RAG_{name}")
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class RagConfig:
     # LLM provider: 'ollama' (default, local) or 'openai' (OpenAI-compatible API)
@@ -50,6 +57,13 @@ class RagConfig:
     # Retrieval
     top_k: int = field(default_factory=lambda: _env_int("TOP_K", 5))
     embed_batch_size: int = field(default_factory=lambda: _env_int("EMBED_BATCH_SIZE", 16))
+    # In-process LRU for query embeddings; 0 disables.
+    embed_cache_size: int = field(default_factory=lambda: _env_int("EMBED_CACHE_SIZE", 256))
+
+    # Low-score Fandom fallback: live MediaWiki search → ingest → re-retrieve
+    fallback_enabled: bool = field(default_factory=lambda: _env_bool("FALLBACK_ENABLED", True))
+    fallback_min_score: float = field(default_factory=lambda: _env_float("FALLBACK_MIN_SCORE", 0.45))
+    fallback_max_results: int = field(default_factory=lambda: _env_int("FALLBACK_MAX_RESULTS", 3))
 
     # Vector store: 'local' (numpy, default) or 'qdrant' (external vector DB)
     vector_backend: str = field(default_factory=lambda: _env_str("VECTOR_BACKEND", "local"))

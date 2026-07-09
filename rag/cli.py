@@ -105,6 +105,11 @@ def _load_pipeline():
 
 def _print_answer(result, show_sources: bool):
     console.print(Panel(result.answer, title="Answer", border_style="cyan"))
+    if getattr(result, "fallback_used", False):
+        doc = getattr(result, "fallback_doc", "") or "unknown page"
+        console.print(
+            f"[yellow]Low retrieval score — fetched and indexed from Fandom:[/yellow] {doc}"
+        )
     if show_sources:
         table = Table(title="Retrieved sources", show_lines=False)
         table.add_column("#", justify="right")
@@ -226,6 +231,15 @@ def info():
     table.add_row("Judge model", config.effective_judge_model())
     table.add_row("Top-k", str(config.top_k))
     table.add_row("Chunk size (chars)", str(config.chunk_chars))
+    table.add_row("Embed cache size", str(config.embed_cache_size))
+    table.add_row(
+        "Fandom fallback",
+        (
+            f"on (min score {config.fallback_min_score})"
+            if config.fallback_enabled
+            else "off"
+        ),
+    )
     table.add_row("Corpus dir", str(config.corpus_dir))
     table.add_row("Vector backend", config.vector_backend)
     if config.vector_backend == "qdrant":
