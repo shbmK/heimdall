@@ -85,13 +85,17 @@ class Retriever:
     def retrieve(self, query: str, k: int | None = None) -> list[SearchHit]:
         k = k or self.config.top_k
         query_vector = self.embed_query(query)
-        hits = self.store.search(query_vector, k=k)
-        return hits
+        return self.store.search(query_vector, k=k, query_text=query)
 
     def retrieve_with_vector(
-        self, query_vector: np.ndarray, k: int | None = None
+        self,
+        query_vector: np.ndarray,
+        k: int | None = None,
+        query_text: str | None = None,
     ) -> list[SearchHit]:
-        return self.store.search(query_vector, k=k or self.config.top_k)
+        return self.store.search(
+            query_vector, k=k or self.config.top_k, query_text=query_text
+        )
 
 
 class RagPipeline:
@@ -137,7 +141,7 @@ class RagPipeline:
         logger.info("query k=%d %s", k, question[:120])
         start = time.perf_counter()
         query_vector = self.retriever.embed_query(question)
-        hits = self.retriever.retrieve_with_vector(query_vector, k=k)
+        hits = self.retriever.retrieve_with_vector(query_vector, k=k, query_text=question)
 
         max_score = max((h.score for h in hits), default=0.0)
         logger.info(
@@ -161,7 +165,9 @@ class RagPipeline:
                 fallback_used = True
                 fallback_doc = result.doc_id
                 logger.info("fallback ok doc=%s chunks=%d", result.doc_id, result.chunks_added)
-                hits = self.retriever.retrieve_with_vector(query_vector, k=k)
+                hits = self.retriever.retrieve_with_vector(
+                    query_vector, k=k, query_text=question
+                )
                 max_score = max((h.score for h in hits), default=0.0)
                 logger.info("retrieve post-fallback hits=%d max_score=%.4f", len(hits), max_score)
             elif result is not None:

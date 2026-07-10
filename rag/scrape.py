@@ -2,9 +2,10 @@
 
 Uses each wiki's MediaWiki API (``action=parse``) rather than raw HTML pages,
 then converts the article HTML to clean markdown with the stdlib HTML parser:
-infoboxes, tables, galleries, navigation and reference markup are dropped, and
-section headings are preserved so downstream chunking follows article
-structure.
+navigation, galleries, and reference markup are dropped. Infobox key/value
+pairs are extracted into a ``## Quick Facts`` section (aliases, real names,
+affiliations) before the body. Section headings are preserved so downstream
+chunking follows article structure.
 
 Robustness: retries with exponential backoff, redirect following, per-page
 skip-and-report on failure, a polite delay between requests, an identifying
@@ -34,7 +35,6 @@ WIKIS = {
     "dc": "https://dc.fandom.com",
 }
 
-# (page title on the wiki, friendly slug used for the local filename)
 CHARACTERS: dict[str, list[tuple[str, str]]] = {
     "marvel": [
         ("Peter Parker (Earth-616)", "spider_man"),
@@ -93,7 +93,6 @@ CHARACTERS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
-# Sections that carry no factual value for RAG.
 _DROP_SECTIONS = {
     "references", "external links", "links", "links and references", "see also",
     "notes", "trivia", "gallery", "recommended reading", "related", "footnotes",
@@ -113,6 +112,132 @@ class ScrapeResult:
     error: str = ""
 
 
+class _InfoboxExtractor(HTMLParser):
+    """Pull key/value pairs from Fandom character infobox tables."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.facts: list[tuple[str, str]] = []
+        self._in_infobox = 0
+        self._in_row = False
+        self._in_th = False
+        self._in_td = False
+        self._th_buf: list[str] = []
+        self._td_buf: list[str] = []
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        attr_map = dict(attrs)
+        classes = attr_map.get("class") or ""
+        if tag == "table" and "infobox" in classes:
+            self._in_infobox += 1
+            return
+        if not self._in_infobox:
+            return
+        if tag in {"script", "style", "sup"}:
+            self._skip_depth += 1
+            return
+        if self._skip_depth:
+            return
+        if tag == "tr":
+            self._in_row = True
+            self._th_buf = []
+            self._td_buf = []
+        elif tag == "th" and self._in_row:
+            self._in_th = True
+        elif tag == "td" and self._in_row:
+            self._in_td = True
+        elif tag == "br" and self._in_td:
+            self._td_buf.append(", ")
+
+    def handle_endtag(self, tag):
+        if tag in {"script", "style", "sup"} and self._skip_depth:
+            self._skip_depth -= 1
+            return
+        if tag == "table" and self._in_infobox:
+            self._in_infobox -= 1
+            return
+        if not self._in_infobox or self._skip_depth:
+            return
+        if tag == "th":
+            self._in_th = False
+        elif tag == "td":
+            self._in_td = False
+        elif tag == "tr" and self._in_row:
+            self._in_row = False
+            key = re.sub(r"\s+", " ", "".join(self._th_buf)).strip().rstrip(":")
+            value = re.sub(r"\s+", " ", "".join(self._td_buf)).strip()
+            value = re.sub(r"\s*,\s*,+", ",", value).strip(" ,")
+            if key and value and len(value) < 500:
+                self.facts.append((key, value))
+
+    def handle_data(self, data):
+        if not self._in_infobox or self._skip_depth:
+            return
+        if self._in_th:
+            self._th_buf.append(data)
+        elif self._in_td:
+            self._td_buf.append(data)
+
+
+_INFOBOX_KEYS = {
+    "real name",
+    "current alias",
+    "aliases",
+    "alias",
+    "identity",
+    "affiliation",
+    "affiliations",
+    "relatives",
+    "base of operations",
+    "status",
+    "citizenship",
+    "marital status",
+    "occupation",
+    "gender",
+    "height",
+    "weight",
+    "eyes",
+    "hair",
+    "creators",
+    "first",
+    "first appearance",
+    "place of birth",
+    "origin",
+    "team affiliations",
+    "group affiliation",
+    "powers",
+    "abilities",
+}
+
+
+def extract_infobox_facts(html: str) -> list[tuple[str, str]]:
+    """Return curated (label, value) pairs from character infoboxes."""
+    parser = _InfoboxExtractor()
+    parser.feed(html)
+    parser.close()
+    seen: set[str] = set()
+    out: list[tuple[str, str]] = []
+    for key, value in parser.facts:
+        key_norm = key.lower()
+        if key_norm not in _INFOBOX_KEYS and not any(k in key_norm for k in ("alias", "name", "affiliation")):
+            continue
+        if key_norm in seen:
+            continue
+        seen.add(key_norm)
+        out.append((key, value))
+    return out
+
+
+def _facts_markdown(facts: list[tuple[str, str]]) -> str:
+    if not facts:
+        return ""
+    lines = ["## Quick Facts", ""]
+    for key, value in facts:
+        lines.append(f"- **{key}**: {value}")
+    return "\n".join(lines)
+
+
 class _HtmlToMarkdown(HTMLParser):
     """Convert MediaWiki article HTML into plain markdown text."""
 
@@ -130,7 +255,6 @@ class _HtmlToMarkdown(HTMLParser):
         self._heading: str | None = None
         self._in_list_item = False
 
-    # -------------------------------------------------------------- helpers
     def _flush(self) -> None:
         text = "".join(self._buffer).strip()
         self._buffer = []
@@ -144,7 +268,6 @@ class _HtmlToMarkdown(HTMLParser):
         blob = f"{attr_map.get('class') or ''} {attr_map.get('id') or ''}"
         return bool(self._SKIP_CLASS_RE.search(blob))
 
-    # ------------------------------------------------------------- handlers
     def handle_starttag(self, tag, attrs):
         if self._skip_depth:
             if tag == self._skip_stack[-1]:
@@ -197,11 +320,13 @@ class _HtmlToMarkdown(HTMLParser):
 
 
 def html_to_markdown(html: str, max_chars: int) -> str:
+    facts = extract_infobox_facts(html)
+    facts_md = _facts_markdown(facts)
+
     parser = _HtmlToMarkdown()
     parser.feed(html)
     parser.close()
 
-    # Drop boilerplate sections and everything under them.
     lines: list[str] = []
     skipping_section = False
     for block in parser.blocks:
@@ -213,12 +338,16 @@ def html_to_markdown(html: str, max_chars: int) -> str:
                 lines.append(f"{m.group(1)} {title}")
             continue
         if not skipping_section:
-            cleaned = re.sub(r"\[\d+\]", "", block)  # residual citation markers
+            cleaned = re.sub(r"\[\d+\]", "", block)
             cleaned = re.sub(r"[ \t]+", " ", cleaned).strip()
             if cleaned:
                 lines.append(cleaned)
 
-    text = "\n\n".join(lines)
+    body = "\n\n".join(lines)
+    if facts_md:
+        text = f"{facts_md}\n\n{body}".strip()
+    else:
+        text = body
     if len(text) > max_chars:
         cut = text.rfind("\n\n", 0, max_chars)
         text = text[: cut if cut > 0 else max_chars]
@@ -291,7 +420,7 @@ def scrape_page(
         path.write_text(header + body + "\n", encoding="utf-8")
         logger.info("scrape ok wiki=%s title=%s resolved=%s chars=%d", wiki, title, resolved_title, len(body))
         return ScrapeResult(wiki=wiki, title=resolved_title, slug=slug, ok=True, path=str(path), url=url, chars=len(body))
-    except Exception as exc:  # noqa: BLE001 — per-page isolation is the point
+    except Exception as exc:  # noqa: BLE001
         logger.warning("scrape fail wiki=%s title=%s error=%s", wiki, title, exc)
         return ScrapeResult(wiki=wiki, title=title, slug=slug, ok=False, url=url, error=str(exc))
 
@@ -339,7 +468,7 @@ def _update_manifest(config: RagConfig, results: list[ScrapeResult]) -> None:
             for page in json.loads(manifest_path.read_text(encoding="utf-8")).get("pages", []):
                 pages[f"{page['wiki']}__{page['slug']}"] = page
         except (ValueError, KeyError):
-            pass  # corrupt manifest: rebuild from this run
+            pass
     for r in results:
         pages[f"{r.wiki}__{r.slug}"] = vars(r)
     ordered = sorted(pages.values(), key=lambda p: (p["wiki"], p["slug"]))

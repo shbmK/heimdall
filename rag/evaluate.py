@@ -62,12 +62,27 @@ def evaluate_question(
     client: LLMProvider,
     judge_model: str,
     item: EvalItem,
+    *,
+    retrieval_only: bool = False,
 ) -> QuestionResult:
-    logger.debug("eval id=%s category=%s", item.id, item.category)
-    result = pipeline.answer(item.question)
-    retrieved_docs = [h.chunk.doc_id for h in result.hits]
+    logger.debug("eval id=%s category=%s retrieval_only=%s", item.id, item.category, retrieval_only)
+    start = time.perf_counter()
+    if retrieval_only:
+        hits = pipeline.retriever.retrieve(item.question)
+        retrieval_seconds = time.perf_counter() - start
+        total_seconds = retrieval_seconds
+        answer = ""
+        retrieved_docs = [h.chunk.doc_id for h in hits]
+        context = ""
+    else:
+        result = pipeline.answer(item.question)
+        retrieval_seconds = result.retrieval_seconds
+        total_seconds = result.total_seconds
+        answer = result.answer
+        retrieved_docs = [h.chunk.doc_id for h in result.hits]
+        context = "\n\n".join(h.chunk.text for h in result.hits)
+
     relevant = set(item.relevant_docs)
-    context = "\n\n".join(h.chunk.text for h in result.hits)
 
     scores: dict = {}
     if item.answerable and relevant:
@@ -77,33 +92,33 @@ def evaluate_question(
         scores["mrr"] = metrics.mrr(retrieved_docs, relevant)
         scores["ndcg"] = metrics.ndcg_at_k(retrieved_docs, relevant)
 
-    if item.answerable:
-        scores["token_f1"] = metrics.token_f1(result.answer, item.reference_answer)
-        scores["faithfulness"] = metrics.judge_faithfulness(client, judge_model, context, result.answer)
-        scores["relevance"] = metrics.judge_relevance(client, judge_model, item.question, result.answer)
-        scores["correctness"] = metrics.judge_correctness(
-            client, judge_model, item.question, item.reference_answer, result.answer
-        )
-        # An abstention on an answerable question is a miss.
-        scores["abstained"] = metrics.is_abstention(result.answer)
-    else:
-        abstained = metrics.is_abstention(result.answer)
-        scores["abstention_correct"] = 1.0 if abstained else 0.0
+    if not retrieval_only:
+        if item.answerable:
+            scores["token_f1"] = metrics.token_f1(answer, item.reference_answer)
+            scores["faithfulness"] = metrics.judge_faithfulness(client, judge_model, context, answer)
+            scores["relevance"] = metrics.judge_relevance(client, judge_model, item.question, answer)
+            scores["correctness"] = metrics.judge_correctness(
+                client, judge_model, item.question, item.reference_answer, answer
+            )
+            scores["abstained"] = metrics.is_abstention(answer)
+        else:
+            abstained = metrics.is_abstention(answer)
+            scores["abstention_correct"] = 1.0 if abstained else 0.0
 
     logger.debug(
         "eval id=%s retrieval_s=%.2f total_s=%.2f scores=%s",
         item.id,
-        result.retrieval_seconds,
-        result.total_seconds,
+        retrieval_seconds,
+        total_seconds,
         {k: v for k, v in scores.items() if v is not None},
     )
     return QuestionResult(
         item=item,
-        answer=result.answer,
+        answer=answer,
         retrieved_docs=retrieved_docs,
         scores=scores,
-        retrieval_seconds=result.retrieval_seconds,
-        total_seconds=result.total_seconds,
+        retrieval_seconds=retrieval_seconds,
+        total_seconds=total_seconds,
     )
 
 
@@ -136,6 +151,7 @@ def run_evaluation(
     limit: int | None = None,
     category: str | None = None,
     progress=None,
+    retrieval_only: bool = False,
 ) -> dict:
     items = load_eval_set(config.eval_path)
     if category:
@@ -147,15 +163,18 @@ def run_evaluation(
 
     judge_model = config.effective_judge_model()
     logger.info(
-        "eval questions=%d judge=%s category=%s limit=%s",
+        "eval questions=%d judge=%s category=%s limit=%s retrieval_only=%s",
         len(items),
         judge_model,
         category or "all",
         limit or "none",
+        retrieval_only,
     )
     results: list[QuestionResult] = []
     for item in items:
-        result = evaluate_question(pipeline, client, judge_model, item)
+        result = evaluate_question(
+            pipeline, client, judge_model, item, retrieval_only=retrieval_only
+        )
         results.append(result)
         if progress:
             progress(result)
@@ -168,6 +187,11 @@ def run_evaluation(
             "judge_model": judge_model,
             "top_k": config.top_k,
             "chunk_chars": config.chunk_chars,
+            "hybrid_enabled": config.hybrid_enabled,
+            "hybrid_alpha": config.hybrid_alpha,
+            "max_chunks_per_doc": config.max_chunks_per_doc,
+            "retrieval_only": retrieval_only,
+            "fallback_enabled": False if retrieval_only else config.fallback_enabled,
         },
         "run_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "overall": _aggregate(results),

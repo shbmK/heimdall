@@ -188,22 +188,48 @@ def chat():
 def eval_cmd(
     limit: Optional[int] = typer.Option(None, help="Only run the first N questions."),
     category: Optional[str] = typer.Option(None, help="Only run questions of one category."),
+    retrieval_only: bool = typer.Option(
+        False,
+        "--retrieval-only",
+        help="Score retrieval only (no generation, no live Fandom fallback).",
+    ),
 ):
     """Run the evaluation set and report retrieval + generation metrics."""
     from .evaluate import run_evaluation
 
     config, client, pipeline = _load_pipeline()
-    logger.info("eval limit=%s category=%s", limit or "none", category or "all")
+    logger.info(
+        "eval limit=%s category=%s retrieval_only=%s",
+        limit or "none",
+        category or "all",
+        retrieval_only,
+    )
 
     def report(result):
+        if retrieval_only:
+            hit = result.scores.get("hit_rate")
+            marker = "[green]hit[/green]" if hit else "[yellow]miss[/yellow]"
+            if not result.item.answerable:
+                marker = "[dim]n/a[/dim]"
+            console.print(f"  {marker} [{result.item.category}] {result.item.question[:70]}")
+            return
         marker = "[green]ok[/green]" if not result.scores.get("abstained") else "[yellow]abstained[/yellow]"
         if not result.item.answerable:
             marker = "[green]ok[/green]" if result.scores.get("abstention_correct") else "[red]hallucinated[/red]"
         console.print(f"  {marker} [{result.item.category}] {result.item.question[:70]}")
 
-    console.print(f"Evaluating with judge model [bold]{config.effective_judge_model()}[/bold] ...")
+    mode = "retrieval-only" if retrieval_only else f"judge={config.effective_judge_model()}"
+    console.print(f"Evaluating ({mode}) ...")
     try:
-        report_data = run_evaluation(config, client, pipeline, limit=limit, category=category, progress=report)
+        report_data = run_evaluation(
+            config,
+            client,
+            pipeline,
+            limit=limit,
+            category=category,
+            progress=report,
+            retrieval_only=retrieval_only,
+        )
     except (FileNotFoundError, ValueError, LLMError) as exc:
         _fail(str(exc))
 
@@ -263,6 +289,14 @@ def info():
     table.add_row("Top-k", str(config.top_k))
     table.add_row("Chunk size (chars)", str(config.chunk_chars))
     table.add_row("Embed cache size", str(config.embed_cache_size))
+    table.add_row(
+        "Hybrid retrieval",
+        (
+            f"on (alpha={config.hybrid_alpha}, max {config.max_chunks_per_doc}/doc)"
+            if config.hybrid_enabled
+            else "off"
+        ),
+    )
     table.add_row(
         "Fandom fallback",
         (

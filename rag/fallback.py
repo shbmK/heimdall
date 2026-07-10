@@ -3,17 +3,22 @@
 Searches Marvel and DC Fandom, fetches the best matching page, writes it into
 the corpus, appends its chunks to the vector store, and returns metadata so
 the pipeline can re-retrieve.
+
+If the corpus already has the page but the vector index does not, the existing
+file is chunked and indexed instead of being skipped.
 """
 
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import requests
 
 from .chunking import chunk_document
 from .config import RagConfig
+from .ingest import _parse_front_matter
 from .llm import LLMProvider
 from .logging_config import get_logger
 from .scrape import (
@@ -75,7 +80,6 @@ def _search_wiki(
                 title = item.get("title", "")
                 if not title:
                     continue
-                # MediaWiki search order is relevance; assign descending rank scores.
                 hits.append((wiki, title, float(limit - i)))
             return hits
         except (requests.RequestException, ValueError, KeyError, TypeError) as exc:
@@ -152,6 +156,54 @@ def _write_corpus_page(
     )
 
 
+def _index_corpus_file(
+    config: RagConfig,
+    client: LLMProvider,
+    store: BaseVectorStore,
+    corpus_path: Path,
+    doc_id: str,
+    wiki: str,
+    url: str = "",
+) -> FallbackResult:
+    """Chunk + embed an existing corpus markdown file into the store."""
+    raw = corpus_path.read_text(encoding="utf-8")
+    meta, body = _parse_front_matter(raw)
+    title = meta.get("title") or doc_id
+    source = meta.get("source") or url
+    universe = meta.get("universe") or ("Marvel" if wiki == "marvel" else "DC")
+
+    chunks = chunk_document(
+        doc_id=doc_id,
+        title=title,
+        text=body,
+        max_chars=config.chunk_chars,
+        overlap_chars=config.chunk_overlap_chars,
+        metadata={"title": title, "universe": universe, "source": source},
+    )
+    if not chunks:
+        return FallbackResult(
+            ok=False,
+            doc_id=doc_id,
+            title=title,
+            wiki=wiki,
+            url=source,
+            error="no chunks produced from existing corpus file",
+        )
+
+    embeddings = client.embed([c.text for c in chunks])
+    store.add(chunks, embeddings)
+    store.persist()
+    logger.info("fallback indexed existing doc=%s chunks=%d", doc_id, len(chunks))
+    return FallbackResult(
+        ok=True,
+        doc_id=doc_id,
+        title=title,
+        wiki=wiki,
+        url=source,
+        chunks_added=len(chunks),
+    )
+
+
 def fetch_and_ingest(
     config: RagConfig,
     client: LLMProvider,
@@ -171,7 +223,7 @@ def fetch_and_ingest(
             logger.debug("fallback search wiki=%s hits=%d", wiki, len(wiki_hits))
         except RuntimeError as exc:
             logger.warning("fallback search wiki=%s skipped error=%s", wiki, exc)
-            continue  # one wiki down should not abort the other
+            continue
         time.sleep(config.scrape_delay_seconds)
 
     best = _pick_best_hit(all_hits, query=query)
@@ -184,20 +236,29 @@ def fetch_and_ingest(
     slug = slugify(title)
     doc_id = _doc_id_for(wiki, title)
     corpus_path = config.corpus_dir / doc_id
-
-    if corpus_path.exists():
-        logger.info("fallback skipped doc=%s", doc_id)
-        return FallbackResult(
-            ok=False,
-            doc_id=doc_id,
-            title=title,
-            wiki=wiki,
-            skipped_existing=True,
-            error=f"corpus already has {doc_id}",
-        )
-
     base_url = WIKIS[wiki]
     url = f"{base_url}/wiki/{title.replace(' ', '_')}"
+
+    def _handle_existing(path: Path, existing_doc_id: str, existing_title: str) -> FallbackResult:
+        if store.contains_doc(existing_doc_id):
+            logger.info("fallback skipped already-indexed doc=%s", existing_doc_id)
+            return FallbackResult(
+                ok=False,
+                doc_id=existing_doc_id,
+                title=existing_title,
+                wiki=wiki,
+                url=url,
+                skipped_existing=True,
+                error=f"index already has {existing_doc_id}",
+            )
+        logger.info("fallback indexing existing corpus file doc=%s", existing_doc_id)
+        return _index_corpus_file(
+            config, client, store, path, existing_doc_id, wiki, url=url
+        )
+
+    if corpus_path.exists():
+        return _handle_existing(corpus_path, doc_id, title)
+
     try:
         resolved_title, html = _fetch_page_html(session, base_url, title)
         body = html_to_markdown(html, max_chars=config.max_doc_chars)
@@ -212,21 +273,11 @@ def fetch_and_ingest(
                 error=f"extracted only {len(body)} chars — page is likely empty",
             )
 
-        # Prefer slug from resolved title so filenames stay stable after redirects.
         slug = slugify(resolved_title)
         doc_id = f"{wiki}__{slug}.md"
         corpus_path = config.corpus_dir / doc_id
         if corpus_path.exists():
-            logger.info("fallback skipped doc=%s", doc_id)
-            return FallbackResult(
-                ok=False,
-                doc_id=doc_id,
-                title=resolved_title,
-                wiki=wiki,
-                url=url,
-                skipped_existing=True,
-                error=f"corpus already has {doc_id}",
-            )
+            return _handle_existing(corpus_path, doc_id, resolved_title)
 
         result = _write_corpus_page(config, wiki, resolved_title, slug, body, url)
         _update_manifest(config, [result])
@@ -267,7 +318,7 @@ def fetch_and_ingest(
             url=url,
             chunks_added=len(chunks),
         )
-    except Exception as exc:  # noqa: BLE001 — fallback must not crash ask/chat
+    except Exception as exc:  # noqa: BLE001
         logger.error("fallback error wiki=%s title=%s error=%s", wiki, title, exc)
         return FallbackResult(
             ok=False,

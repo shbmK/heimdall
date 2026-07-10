@@ -10,8 +10,8 @@ A local Retrieval-Augmented Generation (RAG) pipeline for Marvel and DC wiki lor
 ```
 Fandom wikis ──rag scrape──> data/corpus/*.md ──rag ingest──> data/index/
                                                                   │
-User question ──rag ask──> embed query (LRU cache) ──cosine top-k──┘
-                                │
+User question ──rag ask──> embed query (LRU cache) ──hybrid top-k──┘
+                                │                    (dense + BM25, per-doc cap)
                      low score? └──> live Fandom search → ingest → re-retrieve
                                 │
                                 └──> prompt with cited context ──llama3.2──> answer + sources
@@ -51,14 +51,15 @@ rag ask "How are Superman and Supergirl related?"
 rag chat            # interactive loop
 
 # Run the evaluation suite
-rag eval                        # all 33 questions
+rag eval                        # all 33 questions (retrieval + generation)
+rag eval --retrieval-only       # retrieval metrics only (no LLM judge, no fallback)
 rag eval --limit 8              # quick partial run
 rag eval --category alias       # one category only
 ```
 
 Answers cite the retrieved passages (`[1]`, `[2]`, ...) and the sources table shows which document and section each passage came from. If the answer isn't in the corpus, the model is told to say "I don't know" instead of guessing.
 
-When the best retrieval cosine score is below `RAG_FALLBACK_MIN_SCORE` (default `0.45`), Heimdall searches Marvel/DC Fandom live, fetches the best matching page, appends it to the corpus and vector index, then re-retrieves before generating. Query embeddings are cached in-process (LRU) so repeated questions skip a second embed call.
+Retrieval blends dense cosine with BM25 (`RAG_HYBRID_ENABLED`, default on) and caps how many chunks come from one document (`RAG_MAX_CHUNKS_PER_DOC`, default 2) so comparative questions don't get five passages from a single long page. When the best retrieval score is below `RAG_FALLBACK_MIN_SCORE` (default `0.45`), Heimdall searches Marvel/DC Fandom live, fetches the best matching page, appends it to the corpus and vector index, then re-retrieves before generating. If the page is already on disk but missing from the index, it is indexed instead of skipped. Query embeddings are cached in-process (LRU) so repeated questions skip a second embed call.
 
 ## Run the whole stack with Docker
 
@@ -125,6 +126,8 @@ Performance: mean/p95 end-to-end latency and mean retrieval latency.
 
 The console shows summary tables. Complete per-question results (answers, retrieved docs, individual scores) go to `eval_results.json`.
 
+Use `rag eval --retrieval-only` when tuning hybrid weights, chunking, or diversity — it scores Hit Rate / MRR / nDCG without generation or live Fandom fallback, so runs stay fast and deterministic.
+
 Judge scores from a 3B model are noisy. Treat them as a signal, not ground truth. Point `RAG_JUDGE_MODEL` at a bigger model for more reliable judging.
 
 ## Configuration
@@ -138,9 +141,12 @@ Everything is overridable via `RAG_*` environment variables (see [rag/config.py]
 | `RAG_EMBED_MODEL` | `nomic-embed-text` | embedding model |
 | `RAG_JUDGE_MODEL` | (chat model) | model used for LLM-as-judge metrics |
 | `RAG_TOP_K` | `5` | chunks retrieved per query |
+| `RAG_HYBRID_ENABLED` | `1` | blend dense cosine with BM25 |
+| `RAG_HYBRID_ALPHA` | `0.7` | weight on dense score (`1.0` = dense-only) |
+| `RAG_MAX_CHUNKS_PER_DOC` | `2` | max chunks from one doc in top-k (`0` disables) |
 | `RAG_EMBED_CACHE_SIZE` | `256` | in-process LRU for query embeddings (`0` disables) |
 | `RAG_FALLBACK_ENABLED` | `1` | live Fandom fetch when retrieval score is low |
-| `RAG_FALLBACK_MIN_SCORE` | `0.45` | cosine threshold that triggers fallback |
+| `RAG_FALLBACK_MIN_SCORE` | `0.45` | score threshold that triggers fallback |
 | `RAG_FALLBACK_MAX_RESULTS` | `3` | MediaWiki search hits considered per wiki |
 | `RAG_CHUNK_CHARS` | `1800` | max chunk size (characters) |
 | `RAG_CHUNK_OVERLAP_CHARS` | `250` | overlap between adjacent chunks |
@@ -176,15 +182,16 @@ Providers implement the `LLMProvider` interface (`embed`, `generate`, `available
 ```
 rag/
 ├── config.py      # all knobs, env-overridable
-├── scrape.py      # Fandom MediaWiki scraper (retries, manifest, HTML->markdown)
+├── scrape.py      # Fandom MediaWiki scraper (infobox facts, retries, manifest)
 ├── chunking.py    # markdown-section-aware chunker with overlap
 ├── llm.py         # pluggable LLM providers: Ollama (default) or OpenAI-compatible
+├── sparse.py      # BM25 for hybrid retrieval
 ├── store.py       # pluggable vector stores: local numpy (default) or Qdrant
 ├── ingest.py      # corpus -> chunks -> embeddings -> index
 ├── pipeline.py    # Retriever + RagPipeline (prompt assembly, citations, embed cache)
 ├── fallback.py    # low-score Fandom MediaWiki search → ingest → re-index
 ├── metrics.py     # retrieval metrics, token F1, LLM-as-judge scoring
-├── evaluate.py    # eval runner + aggregation
+├── evaluate.py    # eval runner + aggregation (+ retrieval-only mode)
 └── cli.py         # typer CLI: scrape / ingest / ask / chat / eval / info
 ```
 
