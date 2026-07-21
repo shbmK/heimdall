@@ -289,14 +289,21 @@ class QdrantVectorStore(BaseVectorStore):
 
     def _refresh_doc_ids(self) -> None:
         try:
-            points, _ = self.client.scroll(
-                collection_name=self.collection,
-                limit=10_000,
-                with_payload=["doc_id"],
-                with_vectors=False,
-            )
-            self._doc_ids = {str((p.payload or {}).get("doc_id", "")) for p in points}
-            self._doc_ids.discard("")
+            doc_ids: set[str] = set()
+            offset = None
+            while True:
+                points, offset = self.client.scroll(
+                    collection_name=self.collection,
+                    limit=10_000,
+                    offset=offset,
+                    with_payload=["doc_id"],
+                    with_vectors=False,
+                )
+                doc_ids.update(str((p.payload or {}).get("doc_id", "")) for p in points)
+                if offset is None:
+                    break
+            doc_ids.discard("")
+            self._doc_ids = doc_ids
         except Exception as exc:  # noqa: BLE001
             logger.warning("qdrant doc_id cache refresh failed: %s", exc)
             self._doc_ids = set()

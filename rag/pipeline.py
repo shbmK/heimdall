@@ -52,14 +52,14 @@ class _EmbedCache:
         if self.maxsize <= 0 or key not in self._data:
             return None
         self._data.move_to_end(key)
-        return self._data[key]
+        return self._data[key].copy()
 
     def put(self, key: tuple[str, str], value: np.ndarray) -> None:
         if self.maxsize <= 0:
             return
         if key in self._data:
             self._data.move_to_end(key)
-        self._data[key] = value
+        self._data[key] = value.copy()
         while len(self._data) > self.maxsize:
             self._data.popitem(last=False)
 
@@ -72,13 +72,14 @@ class Retriever:
         self._embed_cache = _EmbedCache(config.embed_cache_size)
 
     def embed_query(self, query: str) -> np.ndarray:
-        key = (self.config.embed_model, query.strip().lower())
+        normalized = query.strip().lower()
+        key = (self.config.embed_model, normalized)
         cached = self._embed_cache.get(key)
         if cached is not None:
             logger.debug("embed cache hit model=%s", self.config.embed_model)
             return cached
-        logger.debug("embed cache miss model=%s chars=%d", self.config.embed_model, len(query))
-        vector = self.client.embed([query])[0]
+        logger.debug("embed cache miss model=%s chars=%d", self.config.embed_model, len(normalized))
+        vector = self.client.embed([normalized])[0]
         self._embed_cache.put(key, vector)
         return vector
 
